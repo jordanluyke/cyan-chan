@@ -1,5 +1,5 @@
 import { MessageRoute } from "./model/message-route"
-import { ClearAudioQueue, GetAudioQueue, PauseAudio, PlayAudio, SkipAudio, StopAudio } from "./routes/message/audio-routes"
+import { ClearAudioQueue, GetAudioQueue, getAudioSource, PauseAudio, PlayAudio, SkipAudio, StopAudio } from "./routes/message/audio-routes"
 import { Commands, RollDie } from "./routes/message/misc-routes"
 
 export class ApiV1 {
@@ -13,6 +13,7 @@ export class ApiV1 {
             new MessageRoute("play", PlayAudio),
             new MessageRoute("queue", GetAudioQueue),
             new MessageRoute("skip", SkipAudio),
+            new MessageRoute("source", getAudioSource),
             new MessageRoute("stop", StopAudio),
             new MessageRoute("uwuroll", RollDie),
         ]
