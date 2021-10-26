@@ -22,19 +22,15 @@ export class RollDie implements MessageRouteHandler {
 
 export class Commands implements MessageRouteHandler {
     public async handle(message: Message, args: string[]) : Promise<void> {
-        try {
-            await message.channel.send([
-                "Commands:",
-                "!clear",
-                "!pause",
-                "!play [search/url/playlist]",
-                "!queue",
-                "!skip",
-                "!stop",
-                "!uwuroll [number]",
-            ].join("\n"))
-        } catch(err) {
-            console.error(err)
-        }
+        await message.channel.send([
+            "Commands:",
+            "!clear",
+            "!pause",
+            "!play [search/url/playlist]",
+            "!queue",
+            "!skip",
+            "!stop",
+            "!uwuroll [number]",
+        ].join("\n"))
     }
 }

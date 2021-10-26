@@ -46,6 +46,11 @@ export class ApiManager {
         let route = api.commandRoutes.find(route => route.command == command)
         if(route == null) return
         let handler = new route.handler
-        await handler.handle(message, args)
+        try {
+            await handler.handle(message, args)
+        } catch(err) {
+            console.error(`!${command} error: ${err}`)
+            await message.channel.send("I made a fucky wucky, I'm sowwy onyii-chan ;;w;;")
+        }
     }
 }
