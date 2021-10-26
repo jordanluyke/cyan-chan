@@ -7,5 +7,6 @@ export class BotState {
         public audioQueueItems: AudioQueueItem[] = [],
         public audioPlayer = createAudioPlayer(),
         public audioStream?: Readable,
+        public idleTimeout?: any,
     ) {}
 }

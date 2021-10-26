@@ -8,6 +8,7 @@ import { youtube_v3 } from "googleapis"
 import { HttpUtil } from "../util/http-util"
 import { BotStateManager } from "../bot-state/bot-state-manager"
 import { BotState } from "../bot-state/model/bot-state"
+import { TimeUnit } from "../util/time-unit"
 
 @injectable()
 export class AudioManager {
@@ -155,7 +156,7 @@ export class AudioManager {
                 part: ["snippet"],
                 q: searchTerms,
                 regionCode: "US",
-                safeSearch: "strict",
+                safeSearch: "moderate",
             })
             let items = res.data.items
             if(items == null)
@@ -231,27 +232,28 @@ export class AudioManager {
                 await item.message.channel.send("Audio stream fail ;;w;;")
             })
             .on(AudioPlayerStatus.Buffering, async () => {
-                console.log("Buffering")
+                // console.log("Buffering")
             })
             .on(AudioPlayerStatus.Playing, async () => {
-                console.log("Playing")
+                if(botState.idleTimeout != null)
+                    clearTimeout(botState.idleTimeout)
+                // console.log("Playing")
             })
             .on(AudioPlayerStatus.Paused, async () => {
-                console.log("Paused")
+                // console.log("Paused")
             })
             .on(AudioPlayerStatus.Idle, async () => {
-                console.log("Idle")
-                if(botState.audioQueueItems.length > 1) {
-                    botState.audioQueueItems = botState.audioQueueItems.slice(1)
-                    await this.playQueue(guildId)
-                } else if(botState.audioQueueItems.length == 1) {
-                    botState.audioQueueItems = botState.audioQueueItems.slice(1)
+                // console.log("Idle")
+                botState.idleTimeout = setTimeout(() => {
                     let voiceConnection = getVoiceConnection(guildId)
                     voiceConnection?.destroy()
-                }
+                }, TimeUnit.MINUTES.toMillis(30))
+                botState.audioQueueItems = botState.audioQueueItems.slice(1)
+                if(botState.audioQueueItems.length > 1)
+                    await this.playQueue(guildId)
             })
             .on("unsubscribe", () => {
-                console.log("unsubscribe")
+                // console.log("unsubscribe")
             })
     }
 }
