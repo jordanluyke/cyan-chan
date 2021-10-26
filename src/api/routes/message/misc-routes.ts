@@ -28,7 +28,9 @@ export class Commands implements MessageRouteHandler {
             "!pause",
             "!play [search/url/playlist]",
             "!queue",
+            "!replace [search/url/playlist]",
             "!skip",
+            "!source",
             "!stop",
             "!uwuroll [number]",
         ].join("\n"))
