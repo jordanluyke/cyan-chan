@@ -123,8 +123,9 @@ export class AudioManager {
             let playlistId = params.get("list")
             if(playlistId != null) {
                 let res = await youtube.playlistItems.list({
+                    maxResults: 50,
                     part: ["snippet"],
-                    playlistId: playlistId
+                    playlistId: playlistId,
                 })
                 let items = res.data.items
                 if(items == null)
@@ -152,7 +153,9 @@ export class AudioManager {
             let searchTerms = args.join(" ")
             let res = await youtube.search.list({
                 part: ["snippet"],
-                q: searchTerms
+                q: searchTerms,
+                regionCode: "US",
+                safeSearch: "strict",
             })
             let items = res.data.items
             if(items == null)
