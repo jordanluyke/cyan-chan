@@ -20,8 +20,10 @@ export class AudioManager {
     public async play(message: Message, args: string[]): Promise<void> {
         if(message.guild == null)
             throw new Error("guild null")
-        await this.addQueueItems(message, args)
         let botState = this.getBotStateOrCreate(message.guild.id)
+        let queueItems = await this.getQueueItemsFromMessage(message, args)
+        if(queueItems.length > 0)
+            botState.audioQueueItems = botState.audioQueueItems.concat(queueItems)
         if(botState.audioPlayer.state.status == AudioPlayerStatus.Paused) {
             botState.audioPlayer.unpause()
         } else if(botState.audioPlayer.state.status != AudioPlayerStatus.Playing) {
@@ -70,7 +72,24 @@ export class AudioManager {
         }
     }
 
-    private async addQueueItems(message: Message, args: string[]): Promise<void> {
+    public async replaceQueueItem(message: Message, args: string[]): Promise<void> {
+        if(message.guild == null)
+            throw new Error("guild null")
+        let botState = this.getBotStateOrCreate(message.guild.id)
+        let queueItems = await this.getQueueItemsFromMessage(message, args)
+        if(botState.audioQueueItems.length == 0) {
+            await message.channel.send("No items in queue")
+            return
+        }
+        if(queueItems.length == 0) {
+            await message.channel.send("No item found in input")
+            return
+        }
+        botState.audioQueueItems[0] = queueItems[0]
+        await this.playQueue(message.guild.id)
+    }
+
+    private async getQueueItemsFromMessage(message: Message, args: string[]): Promise<AudioQueueItem[]> {
         if(message.member == null)
             throw new Error("member null")
         if(message.guild == null)
@@ -84,7 +103,8 @@ export class AudioManager {
         let permissions = voiceChannel.permissionsFor(user)
         if(permissions == null || !permissions.has(Permissions.FLAGS.CONNECT) || !permissions.has(Permissions.FLAGS.SPEAK))
             throw new Error("Invalid permissions")
-        if(args.length == 0) return
+        if(args.length == 0)
+            return []
 
         let youtube = new youtube_v3.Youtube({
             auth: this.config.youtubeApiKey
@@ -152,10 +172,7 @@ export class AudioManager {
             queueItems.push(queueItem)
         }
 
-        if(queueItems.length > 0) {
-            let botState = this.getBotStateOrCreate(message.guild.id)
-            botState.audioQueueItems = botState.audioQueueItems.concat(queueItems)
-        }
+        return queueItems
     }
 
     private async playQueue(guildId: string): Promise<void> {
@@ -174,7 +191,6 @@ export class AudioManager {
                 channelId: voiceChannel.id,
                 guildId: voiceChannel.guild.id,
                 adapterCreator: <DiscordGatewayAdapterCreator>voiceChannel.guild.voiceAdapterCreator,
-                selfDeaf: false,
             })
         }
         botState.audioStream = ytdl(item.url, {

@@ -1,4 +1,3 @@
-import { EventEmitter } from "events"
 import { singleton } from "tsyringe"
 import { BotState } from "./model/bot-state"
 

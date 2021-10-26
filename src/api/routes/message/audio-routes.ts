@@ -132,7 +132,7 @@ export class ClearAudioQueue implements MessageRouteHandler {
 }
 
 @autoInjectable()
-export class getAudioSource implements MessageRouteHandler {
+export class GetAudioSource implements MessageRouteHandler {
     constructor(
         public audioManager?: AudioManager,
     ) {}
@@ -151,6 +151,26 @@ export class getAudioSource implements MessageRouteHandler {
                 response = "Queue is empty"
             }
             await message.channel.send(response)
+        } catch(err) {
+            console.error("!queue error:", err)
+            await message.channel.send("Oopsies something bad happened, I'm sowwy onyii-chan ;;w;;")
+        }
+    }
+}
+
+@autoInjectable()
+export class ReplaceAudioQueueItem implements MessageRouteHandler {
+    constructor(
+        public audioManager?: AudioManager,
+    ) {}
+
+    public async handle(message: Message, args: string[]) : Promise<void> {
+        try {
+            if(this.audioManager == null)
+                throw new Error("Injection failed")
+            if(message.guild == null)
+                throw new Error("guild null")
+            this.audioManager.replaceQueueItem(message, args)
         } catch(err) {
             console.error("!queue error:", err)
             await message.channel.send("Oopsies something bad happened, I'm sowwy onyii-chan ;;w;;")
