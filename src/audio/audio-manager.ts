@@ -22,8 +22,11 @@ export class AudioManager {
             throw new Error("guild null")
         let botState = this.getBotStateOrCreate(message.guild.id)
         let queueItems = await this.getQueueItemsFromMessage(message, args)
-        if(queueItems.length > 0)
-            botState.audioQueueItems = botState.audioQueueItems.concat(queueItems)
+        if(queueItems.length == 0 && args.length > 0) {
+            await message.channel.send("No search results")
+            return
+        }
+        botState.audioQueueItems = botState.audioQueueItems.concat(queueItems)
         if(botState.audioPlayer.state.status == AudioPlayerStatus.Paused) {
             botState.audioPlayer.unpause()
         } else if(botState.audioPlayer.state.status != AudioPlayerStatus.Playing) {
@@ -154,6 +157,8 @@ export class AudioManager {
             let items = res.data.items
             if(items == null)
                 throw new Error("items null")
+            if(items.length == 0)
+                return []
             let item = items[0]
             let id = item.id
             if(id == null)
