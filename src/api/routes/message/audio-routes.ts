@@ -55,9 +55,7 @@ export class SkipAudio implements MessageRouteHandler {
     public async handle(message: Message, args: string[]) : Promise<void> {
         if(this.audioManager == null)
             throw new Error("Injection failed")
-        if(message.guild == null)
-            throw new Error("guild null")
-        this.audioManager.skip(message.guild.id)
+        this.audioManager.skip(message)
     }
 }
 

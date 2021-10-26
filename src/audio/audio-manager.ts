@@ -40,19 +40,18 @@ export class AudioManager {
         botState.audioPlayer.pause()
     }
 
-    public async skip(guildId: string): Promise<void> {
-        let botState = this.getBotStateOrCreate(guildId)
-        if(botState.audioQueueItems.length > 1) {
+    public async skip(message: Message): Promise<void> {
+        if(message.guild == null)
+            throw new Error("guild null")
+        let botState = this.getBotStateOrCreate(message.guild.id)
+        if(botState.audioQueueItems.length >= 1) {
             botState.audioQueueItems = botState.audioQueueItems.slice(1)
             botState.audioStream?.destroy()
-            await this.playQueue(guildId)
-        } else if(botState.audioQueueItems.length == 1) {
-            botState.audioQueueItems = botState.audioQueueItems.slice(1)
-            botState.audioStream?.destroy()
-            let voiceConnection = getVoiceConnection(guildId)
-            voiceConnection?.destroy()
+            if(botState.audioQueueItems.length > 1)
+                await this.playQueue(message.guild.id)
         } else {
-            throw new Error("skip but queue null")
+            await message.channel.send("Queue empty")
+            return
         }
     }
 
