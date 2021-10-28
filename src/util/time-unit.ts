@@ -17,8 +17,7 @@ export class TimeUnit {
     public static DAYS = new TimeUnit(days)
     public static YEARS = new TimeUnit(years)
 
-    constructor(private scale: number) {
-    }
+    constructor(private scale: number) {}
 
     public toNanos(duration: number): number {
         return this.scale * duration / nanoseconds

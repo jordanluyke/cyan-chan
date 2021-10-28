@@ -7,7 +7,7 @@ export class HttpUtil {
         queryString.split("&")
             .forEach(kv => {
                 let pair = kv.split("=")
-                if(pair[1] !== undefined)
+                if(pair.length === 2)
                     params.set(pair[0], pair[1])
             })
         return params
