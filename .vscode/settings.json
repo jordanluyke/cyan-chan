@@ -2,9 +2,15 @@
     "files.autoSave": "onFocusChange",
     "files.trimTrailingWhitespace": true,
     "files.exclude": {
-        ".git/": true,
+        ".git/**": true,
         "**/.DS_Store": true,
-        "node_modules/": true,
-        "target/": true
+        "node_modules/**": true,
+        "target/**": true
+    },
+    "files.watcherExclude": {
+        ".git/**": true,
+        "**/.DS_Store": true,
+        "node_modules/**": true,
+        "target/**": true
     }
 }
