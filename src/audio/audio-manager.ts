@@ -46,7 +46,7 @@ export class AudioManager {
         if(message.guild == null)
             throw new BotError("guild null", "Guild not found")
         let botState = this.getBotStateOrCreate(message.guild.id)
-        if(botState.audioQueueItems.length > 1) {
+        if(botState.audioQueueItems.length >= 1) {
             botState.audioQueueItems = botState.audioQueueItems.slice(1)
             botState.audioStream?.destroy()
             if(botState.audioQueueItems.length >= 1)
