@@ -22,12 +22,12 @@ export class AudioManager {
 
     public async play(message: Message, args: string[]): Promise<void> {
         if(message.guild == null)
-            throw new Error("guild null")
+            throw new BotError("guild null", "Guild not found")
         let botState = this.getBotStateOrCreate(message.guild.id)
         let queueItems = await this.getQueueItemsFromMessage(message, args)
         if(queueItems.length == 0 && args.length > 0) {
             await message.channel.send("No search results")
-            return
+            return Promise.resolve()
         }
         botState.audioQueueItems = botState.audioQueueItems.concat(queueItems)
         if(botState.audioPlayer.state.status == AudioPlayerStatus.Paused) {
@@ -44,9 +44,9 @@ export class AudioManager {
 
     public async skip(message: Message): Promise<void> {
         if(message.guild == null)
-            throw new Error("guild null")
+            throw new BotError("guild null", "Guild not found")
         let botState = this.getBotStateOrCreate(message.guild.id)
-        if(botState.audioQueueItems.length >= 1) {
+        if(botState.audioQueueItems.length > 1) {
             botState.audioQueueItems = botState.audioQueueItems.slice(1)
             botState.audioStream?.destroy()
             if(botState.audioQueueItems.length >= 1)
@@ -79,7 +79,7 @@ export class AudioManager {
 
     public async replaceQueueItem(message: Message, args: string[]): Promise<void> {
         if(message.guild == null)
-            throw new Error("guild null")
+            throw new BotError("guild null", "Guild not found")
         let botState = this.getBotStateOrCreate(message.guild.id)
         let queueItems = await this.getQueueItemsFromMessage(message, args)
         if(botState.audioQueueItems.length == 0) {
@@ -96,15 +96,15 @@ export class AudioManager {
 
     private async getQueueItemsFromMessage(message: Message, args: string[]): Promise<AudioQueueItem[]> {
         if(message.member == null)
-            throw new BotError("member null", "Member not found. Nani the fuck?")
+            throw new BotError("member null", "Member not found")
         if(message.guild == null)
             throw new BotError("guild null", "Guild not found")
         let voiceChannel = message.member.voice.channel
         if(voiceChannel == null)
-            throw new BotError("voice channel null", "Error: Are you in a voice channel?")
+            throw new BotError("voice channel null", "Are you in a voice channel?")
         let user = message.client.user
         if(user == null)
-            throw new BotError("user null", "User not found?!")
+            throw new BotError("user null", "User not found")
         let permissions = voiceChannel.permissionsFor(user)
         if(permissions == null || !permissions.has(Permissions.FLAGS.CONNECT) || !permissions.has(Permissions.FLAGS.SPEAK))
             throw new BotError("Invalid permissions", "I need connect and speak privileges :'(")
@@ -134,10 +134,10 @@ export class AudioManager {
                     throw new BotError("playlist items null", "No items found in playlist")
                 queueItems = items.map(item => {
                     if(item.snippet == null)
-                        throw new BotError("snippet null", "snippet not found")
+                        throw new BotError("snippet null", "Snippet not found")
                     let title = item.snippet.title
                     if(title == null)
-                        throw new BotError("title null", "title not found")
+                        throw new BotError("title null", "Title not found")
                     if(item.snippet.resourceId == null)
                         throw new BotError("resourceId null", "resourceId not found")
                     let videoId = item.snippet.resourceId.videoId
@@ -194,7 +194,7 @@ export class AudioManager {
             throw new BotError("member null", "Member not found")
         let voiceChannel = item.message.member.voice.channel
         if(voiceChannel == null)
-            throw new BotError("voiceChannel null", "Error: Are you in a voice channel?")
+            throw new BotError("voiceChannel null", "Are you in a voice channel?")
         let voiceConnection = getVoiceConnection(voiceChannel.guild.id)
         if(voiceConnection == null) {
             voiceConnection = joinVoiceChannel({
