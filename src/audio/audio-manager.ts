@@ -9,6 +9,7 @@ import { HttpUtil } from "../util/http-util"
 import { BotStateManager } from "../bot-state/bot-state-manager"
 import { BotState } from "../bot-state/model/bot-state"
 import { TimeUnit } from "../util/time-unit"
+import { BotError } from "./model/error/bot-error"
 
 @injectable()
 export class AudioManager {
@@ -94,18 +95,18 @@ export class AudioManager {
 
     private async getQueueItemsFromMessage(message: Message, args: string[]): Promise<AudioQueueItem[]> {
         if(message.member == null)
-            throw new Error("member null")
+            throw new BotError("member null", "Member not found. Nani the fuck?")
         if(message.guild == null)
-            throw new Error("guild null")
+            throw new BotError("guild null", "Guild not found")
         let voiceChannel = message.member.voice.channel
         if(voiceChannel == null)
-            throw new Error("voice channel null")
+            throw new BotError("voice channel null", "Are you in a voice channel?")
         let user = message.client.user
         if(user == null)
-            throw new Error("user null")
+            throw new BotError("user null", "User not found?!")
         let permissions = voiceChannel.permissionsFor(user)
         if(permissions == null || !permissions.has(Permissions.FLAGS.CONNECT) || !permissions.has(Permissions.FLAGS.SPEAK))
-            throw new Error("Invalid permissions")
+            throw new BotError("Invalid permissions", "I need connect and speak privileges :'(")
         if(args.length == 0)
             return []
 
@@ -117,7 +118,7 @@ export class AudioManager {
         if(args[0].match(/^https:\/\/.*youtube.com\/.+$/)) {
             let splitUrl = args[0].split("?")
             if(splitUrl.length != 2)
-                throw new Error("Invalid url")
+                throw new BotError("Invalid url", "Invalid url")
             let qs = splitUrl[1]
             let params = HttpUtil.queryStringToMap(qs)
             let playlistId = params.get("list")
@@ -129,21 +130,21 @@ export class AudioManager {
                 })
                 let items = res.data.items
                 if(items == null)
-                    throw new Error("No items found in playlist")
+                    throw new BotError("playlist items null", "No items found in playlist")
                 queueItems = items.map(item => {
                     if(item.snippet == null)
-                        throw new Error("snippet null")
+                        throw new BotError("snippet null", "snippet not found")
                     let title = item.snippet.title
                     if(title == null)
-                        throw new Error("title null")
+                        throw new BotError("title null", "title not found")
                     if(item.snippet.resourceId == null)
-                        throw new Error("resourceId null")
+                        throw new BotError("resourceId null", "resourceId not found")
                     let videoId = item.snippet.resourceId.videoId
                     if(videoId == null)
-                        throw new Error("videoId null")
+                        throw new BotError("videoId null", "videoId not found")
                     let url2 = "https://www.youtube.com/watch?v=" + videoId
                     if(voiceChannel == null)
-                        throw new Error("voiceChannel null")
+                        throw new BotError("voiceChannel null", "Voice channel not found")
                     return new AudioQueueItem(title, url2, message)
                 })
             }
@@ -159,23 +160,23 @@ export class AudioManager {
             })
             let items = res.data.items
             if(items == null)
-                throw new Error("items null")
+                throw new BotError("items null", "No search results found")
             if(items.length == 0)
                 return []
             let item = items[0]
             let id = item.id
             if(id == null)
-                throw new Error("id null")
+                throw new BotError("id null", "ID not found")
             let videoId = id.videoId
             if(videoId == null)
-                throw new Error("videoId null")
+                throw new BotError("videoId null", "videoId not found")
             let url = "https://www.youtube.com/watch?v=" + videoId
             let snippet = item.snippet
             if(snippet == null)
-                throw new Error("snippet null")
+                throw new BotError("snippet null", "snippet not found")
             let title = snippet.title
             if(title == null)
-                throw new Error("title null")
+                throw new BotError("title null", "title not found")
             let queueItem = new AudioQueueItem(title, url, message)
             queueItems.push(queueItem)
         }
@@ -186,13 +187,13 @@ export class AudioManager {
     private async playQueue(guildId: string): Promise<void> {
         let botState = this.botStateManager.getStateOrThrow(guildId)
         if(botState.audioQueueItems.length == 0)
-            throw new Error("queue empty")
+            throw new BotError("queue empty", "Queue empty")
         let item = botState.audioQueueItems[0]
         if(item.message.member == null)
-            throw new Error("member null")
+            throw new BotError("member null", "Member not found")
         let voiceChannel = item.message.member.voice.channel
         if(voiceChannel == null)
-            throw new Error("voiceChannel empty")
+            throw new BotError("voiceChannel null", "Error: Are you in a voice channel?")
         let voiceConnection = getVoiceConnection(voiceChannel.guild.id)
         if(voiceConnection == null) {
             voiceConnection = joinVoiceChannel({
