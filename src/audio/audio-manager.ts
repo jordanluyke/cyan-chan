@@ -10,6 +10,7 @@ import { BotStateManager } from "../bot-state/bot-state-manager"
 import { BotState } from "../bot-state/model/bot-state"
 import { TimeUnit } from "../util/time-unit"
 import { BotError } from "./model/error/bot-error"
+import { createWriteStream } from "fs"
 
 @injectable()
 export class AudioManager {
@@ -32,7 +33,7 @@ export class AudioManager {
         if(botState.audioPlayer.state.status == AudioPlayerStatus.Paused) {
             botState.audioPlayer.unpause()
         } else if(botState.audioPlayer.state.status != AudioPlayerStatus.Playing) {
-            await this.playQueue(message.guild.id)
+            await this.playNextInQueue(message.guild.id)
         }
     }
 
@@ -48,8 +49,8 @@ export class AudioManager {
         if(botState.audioQueueItems.length >= 1) {
             botState.audioQueueItems = botState.audioQueueItems.slice(1)
             botState.audioStream?.destroy()
-            if(botState.audioQueueItems.length > 1)
-                await this.playQueue(message.guild.id)
+            if(botState.audioQueueItems.length >= 1)
+                await this.playNextInQueue(message.guild.id)
         } else {
             await message.channel.send("Queue empty")
             return
@@ -90,7 +91,7 @@ export class AudioManager {
             return
         }
         botState.audioQueueItems[0] = queueItems[0]
-        await this.playQueue(message.guild.id)
+        await this.playNextInQueue(message.guild.id)
     }
 
     private async getQueueItemsFromMessage(message: Message, args: string[]): Promise<AudioQueueItem[]> {
@@ -100,7 +101,7 @@ export class AudioManager {
             throw new BotError("guild null", "Guild not found")
         let voiceChannel = message.member.voice.channel
         if(voiceChannel == null)
-            throw new BotError("voice channel null", "Are you in a voice channel?")
+            throw new BotError("voice channel null", "Error: Are you in a voice channel?")
         let user = message.client.user
         if(user == null)
             throw new BotError("user null", "User not found?!")
@@ -184,7 +185,7 @@ export class AudioManager {
         return queueItems
     }
 
-    private async playQueue(guildId: string): Promise<void> {
+    private async playNextInQueue(guildId: string): Promise<void> {
         let botState = this.botStateManager.getStateOrThrow(guildId)
         if(botState.audioQueueItems.length == 0)
             throw new BotError("queue empty", "Queue empty")
@@ -202,14 +203,24 @@ export class AudioManager {
                 adapterCreator: <DiscordGatewayAdapterCreator>voiceChannel.guild.voiceAdapterCreator,
             })
         }
-        botState.audioStream = ytdl(item.url, {
-            quality: "highestaudio",
-            filter: "audioonly"
-        })
-        let audioResource = createAudioResource(botState.audioStream)
-        voiceConnection.subscribe(botState.audioPlayer)
 
-        botState.audioPlayer.play(audioResource)
+        return new Promise((resolve, reject) => {
+            console.log("Downloading:", item.title, item.url)
+            let tempAudioFile = "target/audio.mp4"
+            ytdl(item.url, {
+                quality: "highestaudio",
+                filter: "audioonly"
+            })
+            .pipe(createWriteStream(tempAudioFile))
+            .on("error", err => {
+                reject(err)
+            })
+            .on("finish", () => {
+                botState.audioPlayer.play(createAudioResource(tempAudioFile))
+                voiceConnection?.subscribe(botState.audioPlayer)
+                resolve()
+            })
+        })
     }
 
     private getBotStateOrCreate(guildId: string): BotState {
@@ -248,12 +259,13 @@ export class AudioManager {
                     let voiceConnection = getVoiceConnection(guildId)
                     voiceConnection?.destroy()
                 }, TimeUnit.MINUTES.toMillis(30))
+
                 botState.audioQueueItems = botState.audioQueueItems.slice(1)
-                if(botState.audioQueueItems.length > 1)
-                    await this.playQueue(guildId)
+                if(botState.audioQueueItems.length >= 1)
+                    await this.playNextInQueue(guildId)
             })
             .on("unsubscribe", () => {
-                // console.log("unsubscribe")
+                console.log("unsubscribe")
             })
     }
 }

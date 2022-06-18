@@ -7,7 +7,7 @@ export class Config {
     public youtubeApiKey = ""
 
     public async load(): Promise<void> {
-        let configFile = JSON.parse(await fs.readFile("config/app-config.json", "utf8"))
+        let configFile = JSON.parse(await fs.readFile("config/app.json", "utf8"))
 
         this.botToken = configFile["botToken"]
         this.youtubeApiKey = configFile["youtubeApiKey"]
