@@ -10,13 +10,13 @@ export class RollDie implements MessageRouteHandler {
             let inputValue = args.length == 0 ? 100 : parseInt(args[0])
             if(isNaN(inputValue) || inputValue <= 1)
                 throw new Error("Invalid roll input")
-            let bytes = 256
+            let bytes = 1024
             await message.channel.send(`ଘ(੭ ˘ ᵕ˘)━☆ﾟ.*･｡ﾟRoll using ${bytes*8} bits...`)
             await MiscUtil.sleep(TimeUnit.SECONDS.toMillis(2))
             let result = RandomUtil.generateNumber(1, inputValue, bytes)
             await message.channel.send(`(❀˘꒳˘) ♡ ${result.toString()} ♡ (1-${inputValue})`)
         } catch(err) {
-            await message.channel.send("Usage: !roll 20")
+            await message.channel.send("Usage: !uwuroll 20")
         }
     }
 }
