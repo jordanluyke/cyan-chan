@@ -252,7 +252,6 @@ export class AudioManager {
             })
             .on(AudioPlayerStatus.Idle, async () => {
                 // console.log("Idle")
-                console.log(1)
                 botState.idleTimeout = setTimeout(() => {
                     let voiceConnection = getVoiceConnection(guildId)
                     voiceConnection?.destroy()

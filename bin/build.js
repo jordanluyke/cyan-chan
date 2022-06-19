@@ -23,7 +23,7 @@ let removeOutputFolder = async () => {
 
 let compile = async () => {
     let cmd = path.join(__dirname, "node_modules/.bin/tsc") + " -p " + path.join(__dirname, "tsconfig.json")
-    let {stdout, stderr} = await util.promisify(childProcess.exec)(cmd)
+    let { stdout, stderr } = await util.promisify(childProcess.exec)(cmd)
     if(stderr) {
         console.log("Compile failed")
         throw stderr
