@@ -47,10 +47,7 @@ export class AudioManager {
             throw new BotError("guild null", "Guild not found")
         let botState = this.getBotStateOrCreate(message.guild.id)
         if(botState.audioQueueItems.length >= 1) {
-            botState.audioQueueItems = botState.audioQueueItems.slice(1)
-            botState.audioStream?.destroy()
-            if(botState.audioQueueItems.length >= 1)
-                await this.playNextInQueue(message.guild.id)
+            botState.audioPlayer.stop()
         } else {
             await message.channel.send("Queue empty")
             return
@@ -255,6 +252,7 @@ export class AudioManager {
             })
             .on(AudioPlayerStatus.Idle, async () => {
                 // console.log("Idle")
+                console.log(1)
                 botState.idleTimeout = setTimeout(() => {
                     let voiceConnection = getVoiceConnection(guildId)
                     voiceConnection?.destroy()

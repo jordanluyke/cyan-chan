@@ -78,7 +78,7 @@ export class GetAudioQueue implements MessageRouteHandler {
                 response += `${i == 0 ? "Now playing" : i+1}: ${item.title}\n\n`
             }
         } else {
-            response = "Queue is empty"
+            response = "Queue empty"
         }
         await message.channel.send(response)
     }
@@ -115,7 +115,7 @@ export class GetAudioSource implements MessageRouteHandler {
         if(queue.length > 0) {
             response = queue[0].url
         } else {
-            response = "Queue is empty"
+            response = "Queue empty"
         }
         await message.channel.send(response)
     }
