@@ -50,7 +50,8 @@ export class ApiManager {
             await handler.handle(message, args)
         } catch(err) {
             console.error(`!${command} error: ${err}`)
-            let msg = err.sendMessage ? "Error: " + err.sendMessage : "I made a fucky wucky, I'm sowwy onyii-chan ;;w;;"
+            console.error(err.stack ?? err)
+            let msg = err.sendMessage ? "Error: " + err.sendMessage : "Oops, something bad happened ;;w;;"
             await message.channel.send(msg)
         }
     }

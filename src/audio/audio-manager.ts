@@ -10,7 +10,8 @@ import { BotStateManager } from "../bot-state/bot-state-manager"
 import { BotState } from "../bot-state/model/bot-state"
 import { TimeUnit } from "../util/time-unit"
 import { BotError } from "./model/error/bot-error"
-import { createWriteStream } from "fs"
+import { Readable } from "stream"
+import ffmpeg from "fluent-ffmpeg"
 
 @injectable()
 export class AudioManager {
@@ -143,7 +144,7 @@ export class AudioManager {
                     let url2 = "https://www.youtube.com/watch?v=" + videoId
                     if(voiceChannel == null)
                         throw new BotError("voiceChannel null", "Voice channel not found")
-                    return new AudioQueueItem(title, url2, message)
+                    return new AudioQueueItem(title, url2, videoId, message)
                 })
             }
         }
@@ -175,7 +176,7 @@ export class AudioManager {
             let title = snippet.title
             if(title == null)
                 throw new BotError("title null", "title not found")
-            let queueItem = new AudioQueueItem(title, url, message)
+            let queueItem = new AudioQueueItem(title, url, videoId, message)
             queueItems.push(queueItem)
         }
 
@@ -201,23 +202,33 @@ export class AudioManager {
             })
         }
 
+        console.log("Downloading:", item.title, item.url)
+
         return new Promise((resolve, reject) => {
-            console.log("Downloading:", item.title, item.url)
-            let tempAudioFile = "target/audio.mp4"
-            ytdl(item.url, {
+            let chunks: Buffer[] = []
+            ytdl(item.videoId, {
                 quality: "highestaudio",
-                filter: "audioonly"
+                filter: format => format.container === "mp4" && !format.hasVideo,
             })
-            .pipe(createWriteStream(tempAudioFile))
-            .on("error", err => {
-                reject(err)
-            })
-            .on("finish", () => {
-                botState.audioPlayer.play(createAudioResource(tempAudioFile))
-                voiceConnection?.subscribe(botState.audioPlayer)
-                resolve()
-            })
+                .on("error", (err: any) => {
+                    throw new Error(err)
+                })
+                .on("data", (chunk: Buffer) => {
+                    chunks.push(chunk)
+                })
+                .on("finish", () => {
+                    resolve(Buffer.concat(chunks))
+                })
         })
+            .then((buffer: Buffer) => {
+                console.log("Shifting pitch...")
+                return this.shift(buffer, 1.5)
+            })
+            .then(buffer => {
+                console.log("Playing...")
+                botState.audioPlayer.play(createAudioResource(Readable.from(buffer)))
+                voiceConnection?.subscribe(botState.audioPlayer)
+            })
     }
 
     private getBotStateOrCreate(guildId: string): BotState {
@@ -264,5 +275,26 @@ export class AudioManager {
             .on("unsubscribe", () => {
                 console.log("unsubscribe")
             })
+    }
+
+    private async shift(inBuffer: Buffer, scale: number): Promise<Buffer> {
+        return new Promise((resolve, reject) => {
+            let chunks: Buffer[] = []
+            ffmpeg()
+                .input(Readable.from(inBuffer))
+                .audioBitrate(44100)
+                .filterGraph(`asetrate=44100*${scale},aresample=44100,atempo=1/${scale}`)
+                .format("wav")
+                .on("error", err => {
+                    reject(new Error(err))
+                })
+                .pipe()
+                .on("data", chunk => {
+                    chunks.push(chunk)
+                })
+                .on("end", () => {
+                    resolve(Buffer.concat(chunks))
+                })
+        })
     }
 }

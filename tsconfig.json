@@ -13,6 +13,7 @@
         "target": "esnext"
     },
     "include": [
-        "src/**/*"
+        "src/**/*",
+        "typings/*.d.ts"
     ]
 }
