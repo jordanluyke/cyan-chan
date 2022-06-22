@@ -11,7 +11,8 @@ import { BotState } from "../bot-state/model/bot-state"
 import { TimeUnit } from "../util/time-unit"
 import { BotError } from "./model/error/bot-error"
 import { Readable } from "stream"
-import ffmpeg from "fluent-ffmpeg"
+import { FfmpegUtil } from "../util/ffmpeg-util"
+import { InputFlag } from "./model/input-flag"
 
 @injectable()
 export class AudioManager {
@@ -24,8 +25,9 @@ export class AudioManager {
     public async play(message: Message, args: string[]): Promise<void> {
         if(message.guild == null)
             throw new BotError("guild null", "Guild not found")
-        let botState = this.getBotStateOrCreate(message.guild.id)
-        let queueItems = await this.getQueueItemsFromMessage(message, args)
+        let guildId = message.guild.id
+        let botState = this.getBotStateOrCreate(guildId)
+        let queueItems = await this.buildQueueItemsFromInput(message, args)
         if(queueItems.length == 0 && args.length > 0) {
             await message.channel.send("No search results")
             return Promise.resolve()
@@ -34,7 +36,7 @@ export class AudioManager {
         if(botState.audioPlayer.state.status == AudioPlayerStatus.Paused) {
             botState.audioPlayer.unpause()
         } else if(botState.audioPlayer.state.status != AudioPlayerStatus.Playing) {
-            await this.playNextInQueue(message.guild.id)
+            return this.playNextInQueue(guildId)
         }
     }
 
@@ -76,23 +78,21 @@ export class AudioManager {
     }
 
     public async replaceQueueItem(message: Message, args: string[]): Promise<void> {
-        if(message.guild == null)
-            throw new BotError("guild null", "Guild not found")
-        let botState = this.getBotStateOrCreate(message.guild.id)
-        let queueItems = await this.getQueueItemsFromMessage(message, args)
-        if(botState.audioQueueItems.length == 0) {
-            await message.channel.send("No items in queue")
-            return
-        }
-        if(queueItems.length == 0) {
-            await message.channel.send("No item found in input")
-            return
-        }
-        botState.audioQueueItems[0] = queueItems[0]
-        await this.playNextInQueue(message.guild.id)
+        return this.buildQueueItemsFromInput(message, args)
+            .then(queueItems => {
+                if(message.guild == null)
+                    throw new BotError("guild null", "Guild not found")
+                let botState = this.getBotStateOrCreate(message.guild.id)
+                if(botState.audioQueueItems.length == 0)
+                    throw new BotError("items empty", "No items in queue")
+                if(queueItems.length == 0)
+                    throw new BotError("queueItems empty", "No item found in input")
+                botState.audioQueueItems[0] = queueItems[0]
+                return this.playNextInQueue(message.guild.id)
+            })
     }
 
-    private async getQueueItemsFromMessage(message: Message, args: string[]): Promise<AudioQueueItem[]> {
+    private async buildQueueItemsFromInput(message: Message, args: string[]): Promise<AudioQueueItem[]> {
         if(message.member == null)
             throw new BotError("member null", "Member not found")
         if(message.guild == null)
@@ -109,13 +109,36 @@ export class AudioManager {
         if(args.length == 0)
             return []
 
+        let inputFlags: InputFlag[] = []
+        let remainingArgs: string[] = []
+        let availableFlags = [
+            new InputFlag("-p", true)
+        ]
+        let cmdFlagNames = availableFlags.map(pf => pf.name)
+
+        for(let i = 0; i < args.length; i++) {
+            if(!args[i].startsWith("-")) {
+                remainingArgs = args.slice(i)
+                break
+            }
+            let inputFlagIndex = cmdFlagNames.indexOf(args[i])
+            if(inputFlagIndex == -1) {
+                remainingArgs = args.slice(i)
+                break
+            }
+            let inputFlag = availableFlags[inputFlagIndex]
+            if(inputFlag.requiresValue)
+                inputFlag.value = args[++i]
+            inputFlags.push(inputFlag)
+        }
+
+        let queueItems: AudioQueueItem[] = []
         let youtube = new youtube_v3.Youtube({
             auth: this.config.youtubeApiKey
         })
-        let queueItems: AudioQueueItem[] = []
 
-        if(args[0].match(/^https:\/\/.*youtube.com\/.+$/)) {
-            let splitUrl = args[0].split("?")
+        if(remainingArgs[0].match(/^https:\/\/.*youtube.com\/.+$/)) {
+            let splitUrl = remainingArgs[0].split("?")
             if(splitUrl.length != 2)
                 throw new BotError("Invalid url", "Invalid url")
             let qs = splitUrl[1]
@@ -127,10 +150,9 @@ export class AudioManager {
                     part: ["snippet"],
                     playlistId: playlistId,
                 })
-                let items = res.data.items
-                if(items == null)
+                if(res.data.items == null)
                     throw new BotError("playlist items null", "No items found in playlist")
-                queueItems = items.map(item => {
+                queueItems = res.data.items.map(item => {
                     if(item.snippet == null)
                         throw new BotError("snippet null", "Snippet not found")
                     let title = item.snippet.title
@@ -141,16 +163,13 @@ export class AudioManager {
                     let videoId = item.snippet.resourceId.videoId
                     if(videoId == null)
                         throw new BotError("videoId null", "videoId not found")
-                    let url2 = "https://www.youtube.com/watch?v=" + videoId
                     if(voiceChannel == null)
                         throw new BotError("voiceChannel null", "Voice channel not found")
-                    return new AudioQueueItem(title, url2, videoId, message)
+                    return new AudioQueueItem(title, videoId, message, inputFlags)
                 })
             }
-        }
-
-        if(queueItems.length == 0) {
-            let searchTerms = args.join(" ")
+        } else {
+            let searchTerms = remainingArgs.join(" ")
             let res = await youtube.search.list({
                 part: ["snippet"],
                 q: searchTerms,
@@ -169,14 +188,13 @@ export class AudioManager {
             let videoId = id.videoId
             if(videoId == null)
                 throw new BotError("videoId null", "videoId not found")
-            let url = "https://www.youtube.com/watch?v=" + videoId
             let snippet = item.snippet
             if(snippet == null)
                 throw new BotError("snippet null", "snippet not found")
             let title = snippet.title
             if(title == null)
                 throw new BotError("title null", "title not found")
-            let queueItem = new AudioQueueItem(title, url, videoId, message)
+            let queueItem = new AudioQueueItem(title, videoId, message, inputFlags)
             queueItems.push(queueItem)
         }
 
@@ -202,11 +220,28 @@ export class AudioManager {
             })
         }
 
-        console.log("Downloading:", item.title, item.url)
+        let pitchScaleInput = item.inputFlags.filter(flag => flag.name == "-p")[0]?.value
+        let pitchScale = typeof pitchScaleInput == "string" ? parseFloat(pitchScaleInput) : null
 
+        console.log("Downloading:", item.title, item.getYoutubeUrl())
+
+        this.getYoutubeVideo(item.videoId)
+            .then(buffer => {
+                if(pitchScale == null)
+                    return Promise.resolve(buffer)
+                return FfmpegUtil.shift(buffer, pitchScale)
+            })
+            .then(buffer => {
+                console.log("Playing...")
+                botState.audioPlayer.play(createAudioResource(Readable.from(buffer)))
+                voiceConnection?.subscribe(botState.audioPlayer)
+            })
+    }
+
+    private getYoutubeVideo(videoId: string): Promise<Buffer> {
         return new Promise((resolve, reject) => {
             let chunks: Buffer[] = []
-            ytdl(item.videoId, {
+            ytdl(videoId, {
                 quality: "highestaudio",
                 filter: format => format.container === "mp4" && !format.hasVideo,
             })
@@ -220,15 +255,6 @@ export class AudioManager {
                     resolve(Buffer.concat(chunks))
                 })
         })
-            .then((buffer: Buffer) => {
-                console.log("Shifting pitch...")
-                return this.shift(buffer, 1.5)
-            })
-            .then(buffer => {
-                console.log("Playing...")
-                botState.audioPlayer.play(createAudioResource(Readable.from(buffer)))
-                voiceConnection?.subscribe(botState.audioPlayer)
-            })
     }
 
     private getBotStateOrCreate(guildId: string): BotState {
@@ -246,9 +272,9 @@ export class AudioManager {
             .on("error", async error => {
                 console.error("Player error:", error)
                 if(botState.audioQueueItems.length == 0)
-                    throw new Error("queue empty")
+                    throw new BotError("queue empty", "Queue empty")
                 let item = botState.audioQueueItems[0]
-                await item.message.channel.send("Audio stream fail ;;w;;")
+                await item.sendMessage("Audio stream fail ;;w;;")
             })
             .on(AudioPlayerStatus.Buffering, async () => {
                 // console.log("Buffering")
@@ -270,31 +296,10 @@ export class AudioManager {
 
                 botState.audioQueueItems = botState.audioQueueItems.slice(1)
                 if(botState.audioQueueItems.length >= 1)
-                    await this.playNextInQueue(guildId)
+                    return this.playNextInQueue(guildId)
             })
             .on("unsubscribe", () => {
                 console.log("unsubscribe")
             })
-    }
-
-    private async shift(inBuffer: Buffer, scale: number): Promise<Buffer> {
-        return new Promise((resolve, reject) => {
-            let chunks: Buffer[] = []
-            ffmpeg()
-                .input(Readable.from(inBuffer))
-                .audioBitrate(44100)
-                .filterGraph(`asetrate=44100*${scale},aresample=44100,atempo=1/${scale}`)
-                .format("wav")
-                .on("error", err => {
-                    reject(new Error(err))
-                })
-                .pipe()
-                .on("data", chunk => {
-                    chunks.push(chunk)
-                })
-                .on("end", () => {
-                    resolve(Buffer.concat(chunks))
-                })
-        })
     }
 }

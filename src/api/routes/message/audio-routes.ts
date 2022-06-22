@@ -12,7 +12,7 @@ export class PlayAudio implements MessageRouteHandler {
     public async handle(message: Message, args: string[]) : Promise<void> {
         if(this.audioManager == null)
             throw new Error("Injection failed")
-        await this.audioManager.play(message, args)
+        return this.audioManager.play(message, args)
     }
 }
 
@@ -27,7 +27,8 @@ export class PauseAudio implements MessageRouteHandler {
             throw new Error("Injection failed")
         if(message.guild == null)
             throw new Error("guild null")
-        await this.audioManager.pause(message.guild.id)
+        let guildId = message.guild.id
+        return this.audioManager.pause(guildId)
     }
 }
 
@@ -42,7 +43,7 @@ export class StopAudio implements MessageRouteHandler {
             throw new Error("Injection failed")
         if(message.guild == null)
             throw new Error("guild null")
-        await this.audioManager.stop(message.guild.id)
+        return this.audioManager.stop(message.guild.id)
     }
 }
 
@@ -70,7 +71,8 @@ export class GetAudioQueue implements MessageRouteHandler {
             throw new Error("Injection failed")
         if(message.guild == null)
             throw new Error("guild null")
-        let queue = await this.audioManager.getQueue(message.guild.id)
+        let guildId = message.guild.id
+        let queue = await this.audioManager.getQueue(guildId)
         let response = ""
         if(queue.length > 0) {
             for(let i = 0; i < queue.length; i++) {
@@ -95,7 +97,7 @@ export class ClearAudioQueue implements MessageRouteHandler {
             throw new Error("Injection failed")
         if(message.guild == null)
             throw new Error("guild null")
-        await this.audioManager.clearQueue(message.guild.id)
+        return this.audioManager.clearQueue(message.guild.id)
     }
 }
 
@@ -113,7 +115,7 @@ export class GetAudioSource implements MessageRouteHandler {
         let queue = await this.audioManager.getQueue(message.guild.id)
         let response = ""
         if(queue.length > 0) {
-            response = queue[0].url
+            response = queue[0].getYoutubeUrl()
         } else {
             response = "Queue empty"
         }
@@ -132,6 +134,6 @@ export class ReplaceAudioQueueItem implements MessageRouteHandler {
             throw new Error("Injection failed")
         if(message.guild == null)
             throw new Error("guild null")
-        this.audioManager.replaceQueueItem(message, args)
+        return this.audioManager.replaceQueueItem(message, args)
     }
 }
