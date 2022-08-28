@@ -1,58 +1,52 @@
-#!/usr/bin/env node
-
 import * as childProcess from "child_process"
 import * as fs from "fs/promises"
 import * as path from "path"
 import * as util from "util"
 import glob from "glob"
 
-const __dirname = path.resolve()
+(async () => {
+    const __dirname = path.resolve()
 
-let removeOutputFolder = async () => {
-    let stats = null
+    console.log("Building...")
+
     try {
-        stats = await fs.stat(path.join(__dirname, "target"))
+        await removeOutputFolder()
+        await compile()
+        await appendJsOnImports()
     } catch(err) {
+        console.log(err)
+        console.log("Exiting")
+        process.exit(1)
     }
-    if(stats != null) {
-        await fs.rm(path.join(__dirname, "target"), {
-            recursive: true
-        })
+
+    console.log("Done")
+
+    async function removeOutputFolder() {
+        try {
+            await fs.rm(path.join(__dirname, "target"), {
+                recursive: true
+            })
+        } catch(err) {
+        }
     }
-}
 
-let compile = async () => {
-    let cmd = path.join(__dirname, "node_modules/.bin/tsc") + " -p " + path.join(__dirname, "tsconfig.json")
-    let { stdout, stderr } = await util.promisify(childProcess.exec)(cmd)
-    if(stderr) {
-        console.log("Compile failed")
-        throw stderr
+    async function compile() {
+        let cmd = "npx tsc"
+        let { stdout, stderr } = await util.promisify(childProcess.exec)(cmd)
+        if(stderr) {
+            console.log("Compile failed")
+            throw stderr
+        }
     }
-}
 
-let appendJsOnImports = async () => {
-    let files = await util.promisify(glob)("target/**/*.js")
-    for(let file of files) {
-        let data = await fs.readFile(file, 'utf8')
-        let regex = /(import .* from\s+['"])([.]+.+)(?=['"])/g
-        if(!data.match(regex)) continue
-        let newData = data.replace(regex, '$1$2.js')
-        await fs.writeFile(file, newData)
+    async function appendJsOnImports() {
+        let files = await util.promisify(glob)("target/**/*.js")
+        for(let file of files) {
+            let data = await fs.readFile(file, 'utf8')
+            let regex = /(import .* from\s+['"])([.]+.+)(?=['"])/g
+            if(!data.match(regex)) continue
+            let newData = data.replace(regex, '$1$2.js')
+            await fs.writeFile(file, newData)
+        }
     }
-}
-
-// Build
-
-console.log("Building...")
-
-try {
-    await removeOutputFolder()
-    await compile()
-    await appendJsOnImports()
-} catch(err) {
-    console.log(err)
-    console.log("Exiting")
-    process.exit(128)
-}
-
-console.log("Done")
+})()
