@@ -3,7 +3,7 @@ import { Config } from "../config"
 import { AudioQueueItem } from "./model/audio-queue-item"
 import { AudioPlayerStatus, createAudioResource, DiscordGatewayAdapterCreator, getVoiceConnection, joinVoiceChannel } from "@discordjs/voice"
 import ytdl from "ytdl-core"
-import { Message, Permissions } from "discord.js"
+import { Message, PermissionFlagsBits } from "discord.js"
 import { youtube_v3 } from "googleapis"
 import { HttpUtil } from "../util/http-util"
 import { BotStateManager } from "../bot-state/bot-state-manager"
@@ -104,7 +104,7 @@ export class AudioManager {
         if(user == null)
             throw new BotError("user null", "User not found")
         let permissions = voiceChannel.permissionsFor(user)
-        if(permissions == null || !permissions.has(Permissions.FLAGS.CONNECT) || !permissions.has(Permissions.FLAGS.SPEAK))
+        if(permissions == null || !permissions.has(PermissionFlagsBits.Connect) || !permissions.has(PermissionFlagsBits.Speak))
             throw new BotError("Invalid permissions", "I need connect and speak privileges :'(")
         if(args.length == 0)
             return []

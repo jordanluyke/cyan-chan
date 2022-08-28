@@ -21,7 +21,7 @@ export class RollDie implements MessageRouteHandler {
 
             await message.channel.send(`ଘ(੭ ˘ ᵕ˘)━☆ﾟ.*･｡ﾟRoll using ${kilobytes} KB ${multiple > 1 ? "each" : ""}...`)
 
-            let rolls = []
+            let rolls: number[] = []
             for(let i = 0; i < multiple; i++) {
                 let roll = RandomUtil.generateNumber(1, maxValue, kilobytes * 1024)
                 rolls.push(roll)
