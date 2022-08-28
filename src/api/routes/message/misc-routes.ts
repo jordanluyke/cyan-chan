@@ -1,22 +1,37 @@
 import { Message } from "discord.js"
-import { MiscUtil } from "../../../util/misc-util"
 import { RandomUtil } from "../../../util/random-util"
-import { TimeUnit } from "../../../util/time-unit"
 import { MessageRouteHandler } from "../../model/message-route-handler"
 
 export class RollDie implements MessageRouteHandler {
     public async handle(message: Message, args: string[]): Promise<void> {
         try {
-            let inputValue = args.length == 0 ? 100 : parseInt(args[0])
-            if(isNaN(inputValue) || inputValue <= 1)
-                throw new Error("Invalid roll input")
-            let bytes = 1024
-            await message.channel.send(`ଘ(੭ ˘ ᵕ˘)━☆ﾟ.*･｡ﾟRoll using ${bytes*8} bits...`)
-            await MiscUtil.sleep(TimeUnit.SECONDS.toMillis(2))
-            let result = RandomUtil.generateNumber(1, inputValue, bytes)
-            await message.channel.send(`(❀˘꒳˘) ♡ ${result.toString()} ♡ (1-${inputValue})`)
+            if(args.length != 1)
+                throw new Error("Invalid input")
+            let inputSplit = args[0].split("d")
+            let kilobytes = 8
+            let multiple = 1
+            if(inputSplit.length == 3) {
+                multiple = parseInt(inputSplit[0])
+                if(isNaN(multiple))
+                    throw new Error("Invalid input")
+            }
+            let maxValue = parseInt(inputSplit.slice(-1)[0])
+            if(isNaN(maxValue))
+                throw new Error("Invalid input")
+
+            await message.channel.send(`ଘ(੭ ˘ ᵕ˘)━☆ﾟ.*･｡ﾟRoll using ${kilobytes} KB ${multiple > 1 ? "each" : ""}...`)
+
+            let rolls = []
+            for(let i = 0; i < multiple; i++) {
+                let roll = RandomUtil.generateNumber(1, maxValue, kilobytes * 1024)
+                rolls.push(roll)
+            }
+            let total = rolls.reduce((previous, current) => previous + current, 0)
+            let multiRollOutput = `[${rolls.join(", ")}] = ${total}`
+
+            await message.channel.send(`(❀˘꒳˘) ♡ ${multiple > 1 ? multiRollOutput : total} ♡`)
         } catch(err) {
-            await message.channel.send("Usage: !uwuroll 20")
+            await message.channel.send("Example: !uwuroll d6")
         }
     }
 }
