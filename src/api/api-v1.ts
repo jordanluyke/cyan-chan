@@ -7,7 +7,7 @@ export class ApiV1 {
     constructor(
         public prefix = "!",
         public commandRoutes: MessageRoute[] = [
-            new MessageRoute("cmd", Commands),
+            new MessageRoute("cyan", Commands),
             new MessageRoute("clear", ClearAudioQueue),
             new MessageRoute("pause", PauseAudio),
             new MessageRoute("play", PlayAudio),
