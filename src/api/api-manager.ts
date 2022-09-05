@@ -1,6 +1,6 @@
 import { injectable } from "tsyringe"
 import { Config } from "../config"
-import { Client, IntentsBitField, Message } from "discord.js"
+import { Client, GatewayIntentBits, Message } from "discord.js"
 import { ApiV1 } from "./api-v1"
 
 const api = new ApiV1()
@@ -19,7 +19,11 @@ export class ApiManager {
 
     private async createDiscordClient(): Promise<Client> {
         return new Client({
-            intents: [IntentsBitField.Flags.Guilds, IntentsBitField.Flags.GuildMessages, IntentsBitField.Flags.GuildVoiceStates]
+            intents: [
+                GatewayIntentBits.Guilds,
+                GatewayIntentBits.GuildMessages,
+                GatewayIntentBits.GuildVoiceStates
+            ]
         })
             .once("ready", () => {
                 console.log("Ready")
