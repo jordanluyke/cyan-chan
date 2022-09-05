@@ -47,7 +47,7 @@ export class Commands implements MessageRouteHandler {
             "!skip",
             "!source",
             "!stop",
-            "!uwuroll [number]",
+            "!uwuroll [dice/number]",
         ].join("\n"))
     }
 }
