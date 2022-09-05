@@ -22,6 +22,7 @@ export class ApiManager {
             intents: [
                 GatewayIntentBits.Guilds,
                 GatewayIntentBits.GuildMessages,
+                GatewayIntentBits.MessageContent,
                 GatewayIntentBits.GuildVoiceStates
             ]
         })
