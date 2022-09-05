@@ -26,6 +26,6 @@
     },
     "devDependencies": {
         "@types/fluent-ffmpeg": "2.1.20",
-        "@types/node": "16.11.7"
+        "@types/node": "18.7.15"
     }
 }
