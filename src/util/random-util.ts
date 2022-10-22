@@ -20,7 +20,7 @@ export class RandomUtil {
         let maxByteValue = this.maxByteValue(byteSize)
         return value
             .div(maxByteValue)
-            .times(_max.minus(_min))
+            .times(_max.minus(_min).plus(1))
             .plus(_min)
             .integerValue(BigNumber.ROUND_FLOOR)
             .toNumber()
