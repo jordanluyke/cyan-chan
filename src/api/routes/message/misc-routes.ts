@@ -20,7 +20,7 @@ export class RollDie implements MessageRouteHandler {
             if(isNaN(maxValue) && maxValue <= 1)
                 throw new Error("Invalid input")
 
-            await message.channel.send(`ଘ(੭ ˘ ᵕ˘)━☆ﾟ.*･｡ﾟ Roll using ${numberRolls > 1 ? numberRolls + " x " : ""}${kilobytes} KB...`)
+            await message.channel.send(`ଘ(੭ ˘ ᵕ˘)━☆ﾟ.*･｡ﾟ`)
 
             let rolls: number[] = []
             for(let i = 0; i < numberRolls; i++) {
