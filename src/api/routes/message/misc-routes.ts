@@ -10,27 +10,27 @@ export class RollDie implements MessageRouteHandler {
             let inputSplit = args[0].split("d")
             let kilobytes = 8
             let bytes = kilobytes * 1024
-            let multiple = 1
+            let numberRolls = 1
             if(inputSplit.length == 2) {
-                multiple = parseInt(inputSplit[0])
-                if(isNaN(multiple) || multiple <= 0)
+                numberRolls = parseInt(inputSplit[0])
+                if(isNaN(numberRolls) || numberRolls <= 0)
                     throw new Error("Invalid input")
             }
             let maxValue = parseInt(inputSplit.slice(-1)[0])
             if(isNaN(maxValue) && maxValue <= 1)
                 throw new Error("Invalid input")
 
-            await message.channel.send(`ଘ(੭ ˘ ᵕ˘)━☆ﾟ.*･｡ﾟ Roll using ${multiple > 1 ? multiple + " x " : ""}${kilobytes} KB...`)
+            await message.channel.send(`ଘ(੭ ˘ ᵕ˘)━☆ﾟ.*･｡ﾟ Roll using ${numberRolls > 1 ? numberRolls + " x " : ""}${kilobytes} KB...`)
 
             let rolls: number[] = []
-            for(let i = 0; i < multiple; i++) {
+            for(let i = 0; i < numberRolls; i++) {
                 let roll = RandomUtil.generateNumber(1, maxValue, bytes)
                 rolls.push(roll)
             }
             let total = rolls.reduce((previous, current) => previous + current, 0)
             let multiRollOutput = `[${rolls.join(", ")}] / [${maxValue}] = ${total}`
 
-            await message.channel.send(`(❀˘꒳˘) ♡ ${multiple > 1 ? multiRollOutput : total} ♡`)
+            await message.channel.send(`(❀˘꒳˘) ♡ ${numberRolls > 1 ? multiRollOutput : total} ♡`)
         } catch(err) {
             await message.channel.send("Example: !uwuroll 2d8")
         }
