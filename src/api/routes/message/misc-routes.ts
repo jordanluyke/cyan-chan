@@ -10,7 +10,6 @@ export class RollDie implements MessageRouteHandler {
             let inputSplit = args[0].split("d")
             let kilobytes = 8
             let bytes = kilobytes * 1024
-            let bits = bytes * 8
             let multiple = 1
             if(inputSplit.length == 2) {
                 multiple = parseInt(inputSplit[0])
@@ -21,7 +20,7 @@ export class RollDie implements MessageRouteHandler {
             if(isNaN(maxValue) && maxValue <= 1)
                 throw new Error("Invalid input")
 
-            await message.channel.send(`ଘ(੭ ˘ ᵕ˘)━☆ﾟ.*･｡ﾟ Roll using ${multiple > 1 ? multiple + " x " : ""}${bits} bits...`)
+            await message.channel.send(`ଘ(੭ ˘ ᵕ˘)━☆ﾟ.*･｡ﾟ Roll using ${multiple > 1 ? multiple + " x " : ""}${kilobytes} KB...`)
 
             let rolls: number[] = []
             for(let i = 0; i < multiple; i++) {
