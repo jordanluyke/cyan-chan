@@ -8,7 +8,7 @@ export class RollDie implements MessageRouteHandler {
             if(args.length != 1)
                 throw new Error("Invalid input")
             let inputSplit = args[0].split("d")
-            let kilobytes = 8
+            let kilobytes = 64
             let bytes = kilobytes * 1024
             let numberRolls = 1
             if(inputSplit.length == 2) {
