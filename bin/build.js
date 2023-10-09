@@ -2,7 +2,7 @@ import * as childProcess from "child_process"
 import * as fs from "fs/promises"
 import * as path from "path"
 import * as util from "util"
-import glob from "glob"
+import { glob } from "glob"
 
 (async () => {
     const __dirname = path.resolve()
