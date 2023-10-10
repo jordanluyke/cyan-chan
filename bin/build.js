@@ -40,7 +40,7 @@ import { glob } from "glob"
     }
 
     async function appendJsOnImports() {
-        let files = await util.promisify(glob)("target/**/*.js")
+        let files = await glob("target/**/*.js")
         for(let file of files) {
             let data = await fs.readFile(file, 'utf8')
             let regex = /(import .* from\s+['"])([.]+.+)(?=['"])/g
