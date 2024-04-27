@@ -1,9 +1,9 @@
 import { Message } from "discord.js"
-import { RandomUtil } from "../../../util/random-util"
-import { MessageRouteHandler } from "../../model/message-route-handler"
+import { RandomUtil } from "../../util/random-util"
+import { MessageRouteHandler } from "../model/message-route-handler"
 
 export class RollDie implements MessageRouteHandler {
-    public async handle(message: Message, args: string[]): Promise<void> {
+    public async handle(guildId: string, message: Message, args: string[]): Promise<void> {
         try {
             if(args.length != 1)
                 throw new Error("Invalid input")
@@ -20,8 +20,6 @@ export class RollDie implements MessageRouteHandler {
             if(isNaN(maxValue) && maxValue <= 1)
                 throw new Error("Invalid input")
 
-            await message.channel.send(`ଘ(੭ ˘ ᵕ˘)━☆ﾟ.*･｡ﾟ`)
-
             let rolls: number[] = []
             for(let i = 0; i < numberRolls; i++) {
                 let roll = RandomUtil.generateNumber(1, maxValue, bytes)
@@ -30,7 +28,7 @@ export class RollDie implements MessageRouteHandler {
             let total = rolls.reduce((previous, current) => previous + current, 0)
             let multiRollOutput = `[${rolls.join(", ")}] / [${maxValue}] = ${total}`
 
-            await message.channel.send(`(❀˘꒳˘) ♡ ${numberRolls > 1 ? multiRollOutput : total} ♡`)
+            await message.channel.send(`ଘ(੭ ˘ ᵕ˘)━☆ﾟ.*･｡ﾟ ♡ ${numberRolls > 1 ? multiRollOutput : total} ♡`)
         } catch(err) {
             await message.channel.send("Example: !uwuroll 2d8")
         }
@@ -38,9 +36,10 @@ export class RollDie implements MessageRouteHandler {
 }
 
 export class Commands implements MessageRouteHandler {
-    public async handle(message: Message, args: string[]): Promise<void> {
+    public async handle(guildId: string, message: Message, args: string[]): Promise<void> {
         await message.channel.send([
             "!clear",
+            "!download_messages",
             "!pause",
             "!play [search/url/playlist]",
             "!queue",

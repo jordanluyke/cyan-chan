@@ -22,12 +22,9 @@ export class AudioManager {
         private botStateManager: BotStateManager,
     ) {}
 
-    public async play(message: Message, args: string[]): Promise<void> {
-        if(message.guild == null)
-            throw new BotError("guild null", "Guild not found")
-        let guildId = message.guild.id
-        let botState = this.getBotStateOrCreate(guildId)
-        let queueItems = await this.buildQueueItemsFromInput(message, args)
+    public async play(guildId: string, message: Message, args: string[]): Promise<void> {
+        const botState = this.getBotStateOrCreate(guildId)
+        const queueItems = await this.buildQueueItemsFromInput(message, args)
         if(queueItems.length == 0 && args.length > 0) {
             await message.channel.send("No search results")
             return Promise.resolve()
@@ -41,14 +38,12 @@ export class AudioManager {
     }
 
     public async pause(guildId: string): Promise<void> {
-        let botState = this.getBotStateOrCreate(guildId)
+        const botState = this.getBotStateOrCreate(guildId)
         botState.audioPlayer.pause()
     }
 
-    public async skip(message: Message): Promise<void> {
-        if(message.guild == null)
-            throw new BotError("guild null", "Guild not found")
-        let botState = this.getBotStateOrCreate(message.guild.id)
+    public async skip(guildId: string, message: Message): Promise<void> {
+        const botState = this.getBotStateOrCreate(guildId)
         if(botState.audioQueueItems.length >= 1) {
             botState.audioPlayer.stop()
         } else {
@@ -58,7 +53,7 @@ export class AudioManager {
     }
 
     public async stop(guildId: string): Promise<void> {
-        let connection = getVoiceConnection(guildId)
+        const connection = getVoiceConnection(guildId)
         connection?.destroy()
     }
 
@@ -67,7 +62,7 @@ export class AudioManager {
     }
 
     public async clearQueue(guildId: string): Promise<void> {
-        let botState = this.getBotStateOrCreate(guildId)
+        const botState = this.getBotStateOrCreate(guildId)
         if(botState.audioQueueItems.length > 0) {
             if(botState.audioPlayer.state.status == AudioPlayerStatus.Paused || botState.audioPlayer.state.status == AudioPlayerStatus.Playing) {
                 botState.audioQueueItems = botState.audioQueueItems.slice(0, 1)
@@ -77,75 +72,71 @@ export class AudioManager {
         }
     }
 
-    public async replaceQueueItem(message: Message, args: string[]): Promise<void> {
+    public async replaceQueueItem(guildId: string, message: Message, args: string[]): Promise<void> {
         return this.buildQueueItemsFromInput(message, args)
             .then(queueItems => {
-                if(message.guild == null)
-                    throw new BotError("guild null", "Guild not found")
-                let botState = this.getBotStateOrCreate(message.guild.id)
+                const botState = this.getBotStateOrCreate(guildId)
                 if(botState.audioQueueItems.length == 0)
                     throw new BotError("items empty", "No items in queue")
                 if(queueItems.length == 0)
                     throw new BotError("queueItems empty", "No item found in input")
                 botState.audioQueueItems[0] = queueItems[0]
-                return this.playNextInQueue(message.guild.id)
+                return this.playNextInQueue(guildId)
             })
     }
 
     private async buildQueueItemsFromInput(message: Message, args: string[]): Promise<AudioQueueItem[]> {
         if(message.member == null)
             throw new BotError("member null", "Member not found")
-        if(message.guild == null)
-            throw new BotError("guild null", "Guild not found")
-        let voiceChannel = message.member.voice.channel
+        const voiceChannel = message.member.voice.channel
         if(voiceChannel == null)
             throw new BotError("voice channel null", "Are you in a voice channel?")
-        let user = message.client.user
+        const user = message.client.user
         if(user == null)
             throw new BotError("user null", "User not found")
-        let permissions = voiceChannel.permissionsFor(user)
+        const permissions = voiceChannel.permissionsFor(user)
         if(permissions == null || !permissions.has(PermissionFlagsBits.Connect) || !permissions.has(PermissionFlagsBits.Speak))
             throw new BotError("Invalid permissions", "I need connect and speak privileges :'(")
         if(args.length == 0)
             return []
 
-        let inputFlags: InputFlag[] = []
+        const inputFlags: InputFlag[] = []
         let remainingArgs: string[] = []
-        let availableFlags = [
+        const availableFlags = [
             new InputFlag("-p", true)
         ]
-        let cmdFlagNames = availableFlags.map(pf => pf.name)
+        const cmdFlagNames = availableFlags.map(pf => pf.name)
 
         for(let i = 0; i < args.length; i++) {
             if(!args[i].startsWith("-")) {
                 remainingArgs = args.slice(i)
                 break
             }
-            let inputFlagIndex = cmdFlagNames.indexOf(args[i])
+            const inputFlagIndex = cmdFlagNames.indexOf(args[i])
             if(inputFlagIndex == -1) {
                 remainingArgs = args.slice(i)
                 break
             }
-            let inputFlag = availableFlags[inputFlagIndex]
+            const inputFlag = availableFlags[inputFlagIndex]
             if(inputFlag.requiresValue)
                 inputFlag.value = args[++i]
             inputFlags.push(inputFlag)
         }
 
         let queueItems: AudioQueueItem[] = []
-        let youtube = new youtube_v3.Youtube({
+        const youtube = new youtube_v3.Youtube({
             auth: this.config.youtubeApiKey
         })
 
         if(remainingArgs[0].match(/^https:\/\/.*youtube.com\/.+$/)) {
-            let splitUrl = remainingArgs[0].split("?")
+            const splitUrl = remainingArgs[0].split("?")
             if(splitUrl.length != 2)
                 throw new BotError("Invalid url", "Invalid url")
-            let qs = splitUrl[1]
-            let params = HttpUtil.queryStringToMap(qs)
-            let playlistId = params.get("list")
+            const qs = splitUrl[1]
+            const params = HttpUtil.queryStringToMap(qs)
+            const playlistId = params.get("list")
             if(playlistId != null) {
-                let res = await youtube.playlistItems.list({
+                const res = await youtube.playlistItems.list({
                     maxResults: 50,
                     part: ["snippet"],
                     playlistId: playlistId,
@@ -155,12 +146,12 @@ export class AudioManager {
                 queueItems = res.data.items.map(item => {
                     if(item.snippet == null)
                         throw new BotError("snippet null", "Snippet not found")
-                    let title = item.snippet.title
+                    const title = item.snippet.title
                     if(title == null)
                         throw new BotError("title null", "Title not found")
                     if(item.snippet.resourceId == null)
                         throw new BotError("resourceId null", "resourceId not found")
-                    let videoId = item.snippet.resourceId.videoId
+                    const videoId = item.snippet.resourceId.videoId
                     if(videoId == null)
                         throw new BotError("videoId null", "videoId not found")
                     if(voiceChannel == null)
@@ -169,32 +160,32 @@ export class AudioManager {
                 })
             }
         } else {
-            let searchTerms = remainingArgs.join(" ")
-            let res = await youtube.search.list({
+            const searchTerms = remainingArgs.join(" ")
+            const res = await youtube.search.list({
                 part: ["snippet"],
                 q: searchTerms,
                 regionCode: "US",
                 safeSearch: "moderate",
             })
-            let items = res.data.items
+            const items = res.data.items
             if(items == null)
                 throw new BotError("items null", "No search results found")
             if(items.length == 0)
                 return []
-            let item = items[0]
-            let id = item.id
+            const item = items[0]
+            const id = item.id
             if(id == null)
                 throw new BotError("id null", "ID not found")
-            let videoId = id.videoId
+            const videoId = id.videoId
             if(videoId == null)
                 throw new BotError("videoId null", "videoId not found")
-            let snippet = item.snippet
+            const snippet = item.snippet
             if(snippet == null)
                 throw new BotError("snippet null", "snippet not found")
-            let title = snippet.title
+            const title = snippet.title
             if(title == null)
                 throw new BotError("title null", "title not found")
-            let queueItem = new AudioQueueItem(title, videoId, message, inputFlags)
+            const queueItem = new AudioQueueItem(title, videoId, message, inputFlags)
             queueItems.push(queueItem)
         }
 
@@ -202,13 +193,13 @@ export class AudioManager {
     }
 
     private async playNextInQueue(guildId: string): Promise<void> {
-        let botState = this.botStateManager.getStateOrThrow(guildId)
+        const botState = this.botStateManager.getStateOrThrow(guildId)
         if(botState.audioQueueItems.length == 0)
             throw new BotError("queue empty", "Queue empty")
-        let item = botState.audioQueueItems[0]
+        const item = botState.audioQueueItems[0]
         if(item.message.member == null)
             throw new BotError("member null", "Member not found")
-        let voiceChannel = item.message.member.voice.channel
+        const voiceChannel = item.message.member.voice.channel
         if(voiceChannel == null)
             throw new BotError("voiceChannel null", "Are you in a voice channel?")
         let voiceConnection = getVoiceConnection(voiceChannel.guild.id)
@@ -220,8 +211,8 @@ export class AudioManager {
             })
         }
 
-        let pitchScaleInput = item.inputFlags.filter(flag => flag.name == "-p")[0]?.value
-        let pitchScale = typeof pitchScaleInput == "string" ? parseFloat(pitchScaleInput) : null
+        const pitchScaleInput = item.inputFlags.filter(flag => flag.name == "-p")[0]?.value
+        const pitchScale = typeof pitchScaleInput == "string" ? parseFloat(pitchScaleInput) : null
 
         console.log("Downloading:", item.title, item.getYoutubeUrl())
 
@@ -240,7 +231,7 @@ export class AudioManager {
 
     private getYoutubeVideo(videoId: string): Promise<Buffer> {
         return new Promise((resolve, reject) => {
-            let chunks: Buffer[] = []
+            const chunks: Buffer[] = []
             ytdl(videoId, {
                 quality: "highestaudio",
                 filter: format => format.container === "mp4" && !format.hasVideo,
@@ -267,13 +258,13 @@ export class AudioManager {
     }
 
     private subscribeOnStateCreate(guildId: string): void {
-        let botState = this.botStateManager.getStateOrThrow(guildId)
+        const botState = this.botStateManager.getStateOrThrow(guildId)
         botState.audioPlayer
             .on("error", async error => {
                 console.error("Player error:", error)
                 if(botState.audioQueueItems.length == 0)
                     throw new BotError("queue empty", "Queue empty")
-                let item = botState.audioQueueItems[0]
+                const item = botState.audioQueueItems[0]
                 await item.sendMessage("Audio stream fail ;;w;;")
             })
             .on(AudioPlayerStatus.Buffering, async () => {
@@ -290,7 +281,7 @@ export class AudioManager {
             .on(AudioPlayerStatus.Idle, async () => {
                 // console.log("Idle")
                 botState.idleTimeout = setTimeout(() => {
-                    let voiceConnection = getVoiceConnection(guildId)
+                    const voiceConnection = getVoiceConnection(guildId)
                     voiceConnection?.destroy()
                 }, TimeUnit.MINUTES.toMillis(30))
 

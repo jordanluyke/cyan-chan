@@ -23,7 +23,7 @@ export class ApiManager {
                 GatewayIntentBits.Guilds,
                 GatewayIntentBits.GuildMessages,
                 GatewayIntentBits.MessageContent,
-                GatewayIntentBits.GuildVoiceStates
+                GatewayIntentBits.GuildVoiceStates,
             ]
         })
             .once("ready", () => {
@@ -45,18 +45,21 @@ export class ApiManager {
     }
 
     private async routeCommand(message: Message): Promise<void> {
-        let parts = message.content.trim().split(" ").filter(part => part != "")
-        let command = parts[0].slice(api.prefix.length).toLowerCase()
-        let args = parts.slice(1)
-        let route = api.commandRoutes.find(route => route.command == command)
+        const parts = message.content.trim().split(" ").filter(part => part != "")
+        const command = parts[0].slice(api.prefix.length).toLowerCase()
+        const args = parts.slice(1)
+        const route = api.commandRoutes.find(route => route.command == command)
         if(route == null) return
-        let handler = new route.handler
+        const handler = new route.handler
+        if(message.guild == null)
+            throw new Error("guild null")
+        const guildId = message.guild.id
         try {
-            await handler.handle(message, args)
+            await handler.handle(guildId, message, args)
         } catch(err) {
             console.error(`!${command} error: ${err}`)
             console.error(err.stack ?? err)
-            let msg = err.sendMessage ? "Error: " + err.sendMessage : "Something bad happened ;;w;;"
+            const msg = err.sendMessage ? "Error: " + err.sendMessage : "Something bad happened ;;w;;"
             await message.channel.send(msg)
         }
     }
