@@ -15,8 +15,6 @@ export class ChannelManager {
         const guild = message.guild
         const channel = message.guild?.channels.cache.find(channel => channel.id == channelId)
 
-        await message.channel.send("Fetching all messages...")
-
         let messages: any[] = []
         while (true) {
             const limit = 100
@@ -52,7 +50,6 @@ export class ChannelManager {
             messages,
         }
 
-        await message.channel.send("Done")
         await message.channel.send({
             files: [{
                 name: "messages.json",
