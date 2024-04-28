@@ -6,7 +6,7 @@ export class RandomUtil {
 
     public static generateId(length: number): string {
         let result = ""
-        for(let i = 0; i < length; i++)
+        for (let i = 0; i < length; i++)
             result += eligibleCharacters.charAt(this.generateNumber(0, eligibleCharacters.length, 8))
         return result
     }

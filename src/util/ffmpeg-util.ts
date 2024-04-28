@@ -5,7 +5,7 @@ export class FfmpegUtil {
 
     public static async shift(inBuffer: Buffer, scale: number, bitrate = 44100, format = "wav"): Promise<Buffer> {
         return new Promise((resolve, reject) => {
-            let chunks: Buffer[] = []
+            const chunks: Buffer[] = []
             console.log("Shifting pitch...")
             ffmpeg()
                 .input(Readable.from(inBuffer))

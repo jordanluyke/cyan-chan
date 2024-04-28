@@ -9,8 +9,10 @@ export class PlayAudio implements MessageRouteHandler {
         public audioManager?: AudioManager,
     ) {}
 
-    public async handle(guildId: string, message: Message, args: string[]) : Promise<void> {
-        if(this.audioManager == null) throw new Error("Injection failed")
+    public async handle(message: Message, args: string[]) : Promise<void> {
+        if (this.audioManager == null) throw new Error("Injection failed")
+        if (message.guild == null) throw new Error("guild null")
+        const guildId = message.guild.id
         return this.audioManager.play(guildId, message, args)
     }
 }
@@ -21,8 +23,10 @@ export class PauseAudio implements MessageRouteHandler {
         public audioManager?: AudioManager,
     ) {}
 
-    public async handle(guildId: string, message: Message, args: string[]) : Promise<void> {
-        if(this.audioManager == null) throw new Error("Injection failed")
+    public async handle(message: Message, args: string[]) : Promise<void> {
+        if (this.audioManager == null) throw new Error("Injection failed")
+        if (message.guild == null) throw new Error("guild null")
+        const guildId = message.guild.id
         return this.audioManager.pause(guildId)
     }
 }
@@ -33,8 +37,10 @@ export class StopAudio implements MessageRouteHandler {
         public audioManager?: AudioManager,
     ) {}
 
-    public async handle(guildId: string, message: Message, args: string[]) : Promise<void> {
-        if(this.audioManager == null) throw new Error("Injection failed")
+    public async handle(message: Message, args: string[]) : Promise<void> {
+        if (this.audioManager == null) throw new Error("Injection failed")
+        if (message.guild == null) throw new Error("guild null")
+        const guildId = message.guild.id
         return this.audioManager.stop(guildId)
     }
 }
@@ -45,8 +51,10 @@ export class SkipAudio implements MessageRouteHandler {
         public audioManager?: AudioManager,
     ) {}
 
-    public async handle(guildId: string, message: Message, args: string[]) : Promise<void> {
-        if(this.audioManager == null) throw new Error("Injection failed")
+    public async handle(message: Message, args: string[]) : Promise<void> {
+        if (this.audioManager == null) throw new Error("Injection failed")
+        if (message.guild == null) throw new Error("guild null")
+        const guildId = message.guild.id
         this.audioManager.skip(guildId, message)
     }
 }
@@ -57,12 +65,14 @@ export class GetAudioQueue implements MessageRouteHandler {
         public audioManager?: AudioManager,
     ) {}
 
-    public async handle(guildId: string, message: Message, args: string[]) : Promise<void> {
-        if(this.audioManager == null) throw new Error("Injection failed")
+    public async handle(message: Message, args: string[]) : Promise<void> {
+        if (this.audioManager == null) throw new Error("Injection failed")
+        if (message.guild == null) throw new Error("guild null")
+        const guildId = message.guild.id
         const queue = await this.audioManager.getQueue(guildId)
         let response = ""
-        if(queue.length > 0) {
-            for(let i = 0; i < queue.length; i++) {
+        if (queue.length > 0) {
+            for (let i = 0; i < queue.length; i++) {
                 const item = queue[i]
                 response += `${i == 0 ? "Now playing" : i+1}: ${item.title}\n\n`
             }
@@ -79,8 +89,10 @@ export class ClearAudioQueue implements MessageRouteHandler {
         public audioManager?: AudioManager,
     ) {}
 
-    public async handle(guildId: string, message: Message, args: string[]) : Promise<void> {
-        if(this.audioManager == null) throw new Error("Injection failed")
+    public async handle(message: Message, args: string[]) : Promise<void> {
+        if (this.audioManager == null) throw new Error("Injection failed")
+        if (message.guild == null) throw new Error("guild null")
+        const guildId = message.guild.id
         return this.audioManager.clearQueue(guildId)
     }
 }
@@ -91,11 +103,13 @@ export class GetAudioSource implements MessageRouteHandler {
         public audioManager?: AudioManager,
     ) {}
 
-    public async handle(guildId: string, message: Message, args: string[]) : Promise<void> {
-        if(this.audioManager == null) throw new Error("Injection failed")
+    public async handle(message: Message, args: string[]) : Promise<void> {
+        if (this.audioManager == null) throw new Error("Injection failed")
+        if (message.guild == null) throw new Error("guild null")
+        const guildId = message.guild.id
         const queue = await this.audioManager.getQueue(guildId)
         let response = ""
-        if(queue.length > 0) {
+        if (queue.length > 0) {
             response = queue[0].getYoutubeUrl()
         } else {
             response = "Queue empty"
@@ -110,8 +124,10 @@ export class ReplaceAudioQueueItem implements MessageRouteHandler {
         public audioManager?: AudioManager,
     ) {}
 
-    public async handle(guildId: string, message: Message, args: string[]) : Promise<void> {
-        if(this.audioManager == null) throw new Error("Injection failed")
+    public async handle(message: Message, args: string[]) : Promise<void> {
+        if (this.audioManager == null) throw new Error("Injection failed")
+        if (message.guild == null) throw new Error("guild null")
+        const guildId = message.guild.id
         return this.audioManager.replaceQueueItem(guildId, message, args)
     }
 }
@@ -121,6 +137,6 @@ export class DownloadMessages implements MessageRouteHandler {
     constructor(
     ) {}
 
-    public async handle(guildId: string, message: Message, args: string[]) : Promise<void> {
+    public async handle(message: Message, args: string[]) : Promise<void> {
     }
 }

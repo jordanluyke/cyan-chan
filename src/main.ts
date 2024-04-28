@@ -4,8 +4,8 @@ import { ApiManager } from "./api/api-manager"
 import { Config } from "./config"
 
 (async () => {
-    let config = container.resolve(Config)
-    let apiManager = container.resolve(ApiManager)
+    const config = container.resolve(Config)
+    const apiManager = container.resolve(ApiManager)
     await config.load()
     await apiManager.start()
 })()

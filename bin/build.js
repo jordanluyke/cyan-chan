@@ -31,21 +31,21 @@ import { glob } from "glob"
     }
 
     async function compile() {
-        let cmd = "npx tsc"
-        let { stdout, stderr } = await util.promisify(childProcess.exec)(cmd)
-        if(stderr) {
+        const cmd = "npx tsc"
+        const { stdout, stderr } = await util.promisify(childProcess.exec)(cmd)
+        if (stderr) {
             console.log("Compile failed")
             throw stderr
         }
     }
 
     async function appendJsOnImports() {
-        let files = await glob("target/**/*.js")
-        for(let file of files) {
-            let data = await fs.readFile(file, 'utf8')
-            let regex = /(import .* from\s+['"])([.]+.+)(?=['"])/g
-            if(!data.match(regex)) continue
-            let newData = data.replace(regex, '$1$2.js')
+        const files = await glob("target/**/*.js")
+        for (const file of files) {
+            const data = await fs.readFile(file, 'utf8')
+            const regex = /(import .* from\s+['"])([.]+.+)(?=['"])/g
+            if (!data.match(regex)) continue
+            const newData = data.replace(regex, '$1$2.js')
             await fs.writeFile(file, newData)
         }
     }

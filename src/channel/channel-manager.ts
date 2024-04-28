@@ -9,7 +9,8 @@ export class ChannelManager {
         private config: Config,
     ) {}
 
-    public async downloadMessages(guildId: string, message: Message): Promise<void> {
+    public async downloadMessages(message: Message): Promise<void> {
+        const guildId = message.guildId
         const channelId = message.channelId
         const guild = message.guild
         const channel = message.guild?.channels.cache.find(channel => channel.id == channelId)
@@ -18,8 +19,9 @@ export class ChannelManager {
 
         let messages: any[] = []
         while (true) {
+            const limit = 100
             const msgs = await message.channel.messages.fetch({
-                limit: 100,
+                limit,
                 before: messages.length > 0 ? messages[messages.length - 1].id : null
             })
                 .then(msgs => {
@@ -34,9 +36,12 @@ export class ChannelManager {
                 })
             if (msgs.length == 0) break
             messages = messages.concat(msgs)
+            if (msgs.length != limit) break
         }
 
-        messages = messages.filter((msg: any) => msg.content != "")
+        messages = messages
+            .filter((msg: any) => msg.content != "")
+            .reverse()
 
         const data = {
             guildName: guild?.name,
@@ -44,7 +49,7 @@ export class ChannelManager {
             guildId,
             channelId,
             timestamp: new Date().getTime(),
-            messages: messages.reverse(),
+            messages,
         }
 
         await message.channel.send("Done")

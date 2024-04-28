@@ -10,7 +10,7 @@ export class BotStateManager {
     }
 
     public createState(guildId: string): BotState {
-        if(this.getState(guildId) != null)
+        if (this.getState(guildId) != null)
             throw new Error("Bot state already exists")
         let botState = new BotState()
         this.botStates.set(guildId, botState)
@@ -19,7 +19,7 @@ export class BotStateManager {
 
     public getStateOrThrow(guildId: string): BotState {
         let botState = this.botStates.get(guildId)
-        if(botState == null)
+        if (botState == null)
             throw new Error("BotState null")
         return botState
     }

@@ -36,10 +36,10 @@ export class ApiManager {
                 console.log("Disconnected")
             })
             .on("messageCreate", async message => {
-                if(message.author.bot) return
-                if(!message.content.startsWith(api.prefix)) return
-                if(message.member == null) return
-                if(message.guildId == null) return
+                if (message.author.bot) return
+                if (!message.content.startsWith(api.prefix)) return
+                if (message.member == null) return
+                if (message.guildId == null) return
                 await this.routeCommand(message)
             })
     }
@@ -49,13 +49,10 @@ export class ApiManager {
         const command = parts[0].slice(api.prefix.length).toLowerCase()
         const args = parts.slice(1)
         const route = api.commandRoutes.find(route => route.command == command)
-        if(route == null) return
+        if (route == null) return
         const handler = new route.handler
-        if(message.guild == null)
-            throw new Error("guild null")
-        const guildId = message.guild.id
         try {
-            await handler.handle(guildId, message, args)
+            await handler.handle(message, args)
         } catch(err) {
             console.error(`!${command} error: ${err}`)
             console.error(err.stack ?? err)

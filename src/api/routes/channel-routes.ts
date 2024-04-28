@@ -9,8 +9,8 @@ export class DownloadMessages implements MessageRouteHandler {
         public channelManager?: ChannelManager,
     ) {}
 
-    public async handle(guildId: string, message: Message, args: string[]) : Promise<void> {
-        if(this.channelManager == null) throw new Error("Injection failed")
-        return this.channelManager.downloadMessages(guildId, message)
+    public async handle(message: Message, args: string[]) : Promise<void> {
+        if (this.channelManager == null) throw new Error("Injection failed")
+        return this.channelManager.downloadMessages(message)
     }
 }

@@ -25,14 +25,14 @@ export class AudioManager {
     public async play(guildId: string, message: Message, args: string[]): Promise<void> {
         const botState = this.getBotStateOrCreate(guildId)
         const queueItems = await this.buildQueueItemsFromInput(message, args)
-        if(queueItems.length == 0 && args.length > 0) {
+        if (queueItems.length == 0 && args.length > 0) {
             await message.channel.send("No search results")
             return Promise.resolve()
         }
         botState.audioQueueItems = botState.audioQueueItems.concat(queueItems)
-        if(botState.audioPlayer.state.status == AudioPlayerStatus.Paused) {
+        if (botState.audioPlayer.state.status == AudioPlayerStatus.Paused) {
             botState.audioPlayer.unpause()
-        } else if(botState.audioPlayer.state.status != AudioPlayerStatus.Playing) {
+        } else if (botState.audioPlayer.state.status != AudioPlayerStatus.Playing) {
             return this.playNextInQueue(guildId)
         }
     }
@@ -44,7 +44,7 @@ export class AudioManager {
 
     public async skip(guildId: string, message: Message): Promise<void> {
         const botState = this.getBotStateOrCreate(guildId)
-        if(botState.audioQueueItems.length >= 1) {
+        if (botState.audioQueueItems.length >= 1) {
             botState.audioPlayer.stop()
         } else {
             await message.channel.send("Queue empty")
@@ -63,8 +63,8 @@ export class AudioManager {
 
     public async clearQueue(guildId: string): Promise<void> {
         const botState = this.getBotStateOrCreate(guildId)
-        if(botState.audioQueueItems.length > 0) {
-            if(botState.audioPlayer.state.status == AudioPlayerStatus.Paused || botState.audioPlayer.state.status == AudioPlayerStatus.Playing) {
+        if (botState.audioQueueItems.length > 0) {
+            if (botState.audioPlayer.state.status == AudioPlayerStatus.Paused || botState.audioPlayer.state.status == AudioPlayerStatus.Playing) {
                 botState.audioQueueItems = botState.audioQueueItems.slice(0, 1)
             } else {
                 botState.audioQueueItems = []
@@ -76,9 +76,9 @@ export class AudioManager {
         return this.buildQueueItemsFromInput(message, args)
             .then(queueItems => {
                 const botState = this.getBotStateOrCreate(guildId)
-                if(botState.audioQueueItems.length == 0)
+                if (botState.audioQueueItems.length == 0)
                     throw new BotError("items empty", "No items in queue")
-                if(queueItems.length == 0)
+                if (queueItems.length == 0)
                     throw new BotError("queueItems empty", "No item found in input")
                 botState.audioQueueItems[0] = queueItems[0]
                 return this.playNextInQueue(guildId)
@@ -86,18 +86,18 @@ export class AudioManager {
     }
 
     private async buildQueueItemsFromInput(message: Message, args: string[]): Promise<AudioQueueItem[]> {
-        if(message.member == null)
+        if (message.member == null)
             throw new BotError("member null", "Member not found")
         const voiceChannel = message.member.voice.channel
-        if(voiceChannel == null)
+        if (voiceChannel == null)
             throw new BotError("voice channel null", "Are you in a voice channel?")
         const user = message.client.user
-        if(user == null)
+        if (user == null)
             throw new BotError("user null", "User not found")
         const permissions = voiceChannel.permissionsFor(user)
-        if(permissions == null || !permissions.has(PermissionFlagsBits.Connect) || !permissions.has(PermissionFlagsBits.Speak))
+        if (permissions == null || !permissions.has(PermissionFlagsBits.Connect) || !permissions.has(PermissionFlagsBits.Speak))
             throw new BotError("Invalid permissions", "I need connect and speak privileges :'(")
-        if(args.length == 0)
+        if (args.length == 0)
             return []
 
         const inputFlags: InputFlag[] = []
@@ -107,18 +107,18 @@ export class AudioManager {
         ]
         const cmdFlagNames = availableFlags.map(pf => pf.name)
 
-        for(let i = 0; i < args.length; i++) {
-            if(!args[i].startsWith("-")) {
+        for (let i = 0; i < args.length; i++) {
+            if (!args[i].startsWith("-")) {
                 remainingArgs = args.slice(i)
                 break
             }
             const inputFlagIndex = cmdFlagNames.indexOf(args[i])
-            if(inputFlagIndex == -1) {
+            if (inputFlagIndex == -1) {
                 remainingArgs = args.slice(i)
                 break
             }
             const inputFlag = availableFlags[inputFlagIndex]
-            if(inputFlag.requiresValue)
+            if (inputFlag.requiresValue)
                 inputFlag.value = args[++i]
             inputFlags.push(inputFlag)
         }
@@ -128,33 +128,33 @@ export class AudioManager {
             auth: this.config.youtubeApiKey
         })
 
-        if(remainingArgs[0].match(/^https:\/\/.*youtube.com\/.+$/)) {
+        if (remainingArgs[0].match(/^https:\/\/.*youtube.com\/.+$/)) {
             const splitUrl = remainingArgs[0].split("?")
-            if(splitUrl.length != 2)
+            if (splitUrl.length != 2)
                 throw new BotError("Invalid url", "Invalid url")
             const qs = splitUrl[1]
             const params = HttpUtil.queryStringToMap(qs)
             const playlistId = params.get("list")
-            if(playlistId != null) {
+            if (playlistId != null) {
                 const res = await youtube.playlistItems.list({
                     maxResults: 50,
                     part: ["snippet"],
                     playlistId: playlistId,
                 })
-                if(res.data.items == null)
+                if (res.data.items == null)
                     throw new BotError("playlist items null", "No items found in playlist")
                 queueItems = res.data.items.map(item => {
-                    if(item.snippet == null)
+                    if (item.snippet == null)
                         throw new BotError("snippet null", "Snippet not found")
                     const title = item.snippet.title
-                    if(title == null)
+                    if (title == null)
                         throw new BotError("title null", "Title not found")
-                    if(item.snippet.resourceId == null)
+                    if (item.snippet.resourceId == null)
                         throw new BotError("resourceId null", "resourceId not found")
                     const videoId = item.snippet.resourceId.videoId
-                    if(videoId == null)
+                    if (videoId == null)
                         throw new BotError("videoId null", "videoId not found")
-                    if(voiceChannel == null)
+                    if (voiceChannel == null)
                         throw new BotError("voiceChannel null", "Voice channel not found")
                     return new AudioQueueItem(title, videoId, message, inputFlags)
                 })
@@ -168,22 +168,22 @@ export class AudioManager {
                 safeSearch: "moderate",
             })
             const items = res.data.items
-            if(items == null)
+            if (items == null)
                 throw new BotError("items null", "No search results found")
-            if(items.length == 0)
+            if (items.length == 0)
                 return []
             const item = items[0]
             const id = item.id
-            if(id == null)
+            if (id == null)
                 throw new BotError("id null", "ID not found")
             const videoId = id.videoId
-            if(videoId == null)
+            if (videoId == null)
                 throw new BotError("videoId null", "videoId not found")
             const snippet = item.snippet
-            if(snippet == null)
+            if (snippet == null)
                 throw new BotError("snippet null", "snippet not found")
             const title = snippet.title
-            if(title == null)
+            if (title == null)
                 throw new BotError("title null", "title not found")
             const queueItem = new AudioQueueItem(title, videoId, message, inputFlags)
             queueItems.push(queueItem)
@@ -194,16 +194,16 @@ export class AudioManager {
 
     private async playNextInQueue(guildId: string): Promise<void> {
         const botState = this.botStateManager.getStateOrThrow(guildId)
-        if(botState.audioQueueItems.length == 0)
+        if (botState.audioQueueItems.length == 0)
             throw new BotError("queue empty", "Queue empty")
         const item = botState.audioQueueItems[0]
-        if(item.message.member == null)
+        if (item.message.member == null)
             throw new BotError("member null", "Member not found")
         const voiceChannel = item.message.member.voice.channel
-        if(voiceChannel == null)
+        if (voiceChannel == null)
             throw new BotError("voiceChannel null", "Are you in a voice channel?")
         let voiceConnection = getVoiceConnection(voiceChannel.guild.id)
-        if(voiceConnection == null) {
+        if (voiceConnection == null) {
             voiceConnection = joinVoiceChannel({
                 channelId: voiceChannel.id,
                 guildId: voiceChannel.guild.id,
@@ -218,7 +218,7 @@ export class AudioManager {
 
         this.getYoutubeVideo(item.videoId)
             .then(buffer => {
-                if(pitchScale == null)
+                if (pitchScale == null)
                     return Promise.resolve(buffer)
                 return FfmpegUtil.shift(buffer, pitchScale)
             })
@@ -250,7 +250,7 @@ export class AudioManager {
 
     private getBotStateOrCreate(guildId: string): BotState {
         let botState = this.botStateManager.getState(guildId)
-        if(botState == null) {
+        if (botState == null) {
             botState = this.botStateManager.createState(guildId)
             this.subscribeOnStateCreate(guildId)
         }
@@ -262,7 +262,7 @@ export class AudioManager {
         botState.audioPlayer
             .on("error", async error => {
                 console.error("Player error:", error)
-                if(botState.audioQueueItems.length == 0)
+                if (botState.audioQueueItems.length == 0)
                     throw new BotError("queue empty", "Queue empty")
                 const item = botState.audioQueueItems[0]
                 await item.sendMessage("Audio stream fail ;;w;;")
@@ -271,7 +271,7 @@ export class AudioManager {
                 // console.log("Buffering")
             })
             .on(AudioPlayerStatus.Playing, async () => {
-                if(botState.idleTimeout != null)
+                if (botState.idleTimeout != null)
                     clearTimeout(botState.idleTimeout)
                 // console.log("Playing")
             })
@@ -286,7 +286,7 @@ export class AudioManager {
                 }, TimeUnit.MINUTES.toMillis(30))
 
                 botState.audioQueueItems = botState.audioQueueItems.slice(1)
-                if(botState.audioQueueItems.length >= 1)
+                if (botState.audioQueueItems.length >= 1)
                     return this.playNextInQueue(guildId)
             })
             .on("unsubscribe", () => {
