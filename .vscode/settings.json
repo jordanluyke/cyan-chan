@@ -1,16 +1,18 @@
 {
     "files.autoSave": "onFocusChange",
     "files.trimTrailingWhitespace": true,
-    "files.exclude": {
-        ".git/**": true,
-        "**/.DS_Store": true,
-        "node_modules/**": true,
-        "target/**": true
-    },
     "files.watcherExclude": {
         ".git/**": true,
         "**/.DS_Store": true,
         "node_modules/**": true,
-        "target/**": true
+        "target/**": true,
+        "package-lock.json": true
+    },
+    "search.exclude": {
+        ".git/**": true,
+        "**/.DS_Store": true,
+        "node_modules/**": true,
+        "target/**": true,
+        "package-lock.json": true
     }
 }

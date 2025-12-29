@@ -24,7 +24,7 @@ export class RollDie implements MessageRouteHandler {
                 rolls.push(roll)
             }
             const total = rolls.reduce((previous, current) => previous + current, 0)
-            const multiRollOutput = `[${rolls.join(', ')}] / [${maxValue}] = ${total}`
+            const multiRollOutput = `[${rolls.join(', ')}] = ${total}`
 
             await channel.send(`ଘ(੭ ˘ ᵕ˘)━☆ﾟ.*･｡ﾟ ♡ ${numberRolls > 1 ? multiRollOutput : total} ♡`)
         } catch (err) {

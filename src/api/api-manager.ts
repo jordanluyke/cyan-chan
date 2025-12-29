@@ -23,7 +23,7 @@ export class ApiManager {
                 GatewayIntentBits.GuildVoiceStates,
             ],
         })
-            .once('ready', () => {
+            .once('clientReady', () => {
                 console.log('Ready')
             })
             .once('reconnecting', () => {
@@ -58,7 +58,7 @@ export class ApiManager {
             console.error(err.stack ?? err)
             const msg = err.sendMessage
                 ? 'Error: ' + err.sendMessage
-                : 'Something bad happened ;;w;;'
+                : 'Something bad happened (˚ ˃̣̣̥⌓˂̣̣̥ )'
             const channel = message.channel as TextChannel
             await channel.send(msg)
         }

@@ -234,11 +234,13 @@ export class AudioManager {
         return new Promise((resolve, reject) => {
             const chunks: Buffer[] = []
             ytdl(videoId, {
-                quality: 'highestaudio',
-                filter: (format) => format.container === 'mp4' && !format.hasVideo,
+                filter: (format) => {
+                    console.log('format:', format)
+                    return format.container === 'mp4' && !format.hasVideo
+                },
             })
                 .on('error', (err: any) => {
-                    throw new Error(err)
+                    reject(err)
                 })
                 .on('data', (chunk: Buffer) => {
                     chunks.push(chunk)
@@ -266,7 +268,7 @@ export class AudioManager {
                 if (botState.audioQueueItems.length == 0)
                     throw new BotError('queue empty', 'Queue empty')
                 const item = botState.audioQueueItems[0]
-                await item.sendMessage('Audio stream fail ;;w;;')
+                await item.sendMessage('Audio stream fail (˚ ˃̣̣̥⌓˂̣̣̥ )')
             })
             .on(AudioPlayerStatus.Buffering, async () => {
                 // console.log("Buffering")
@@ -286,7 +288,9 @@ export class AudioManager {
                 }, TimeUnit.MINUTES.toMillis(30))
 
                 botState.audioQueueItems = botState.audioQueueItems.slice(1)
-                if (botState.audioQueueItems.length >= 1) return this.playNextInQueue(guildId)
+                if (botState.audioQueueItems.length >= 1) {
+                    await this.playNextInQueue(guildId)
+                }
             })
             .on('unsubscribe', () => {
                 console.log('unsubscribe')
