@@ -1,52 +1,42 @@
-import * as childProcess from "child_process"
-import * as fs from "fs/promises"
-import * as path from "path"
-import * as util from "util"
-import { glob } from "glob"
+import * as childProcess from 'child_process'
+import * as fs from 'fs/promises'
+import * as path from 'path'
+import * as util from 'util'
 
 (async () => {
     const __dirname = path.resolve()
-
-    console.log("Building...")
+    const targetDir = path.join(__dirname, 'target')
 
     try {
+        console.log('Building...')
         await removeOutputFolder()
         await compile()
-        await appendJsOnImports()
+        console.log('Done')
+        process.exit(0)
     } catch(err) {
         console.log(err)
-        console.log("Exiting")
+        console.log('Exiting')
         process.exit(1)
     }
 
-    console.log("Done")
-
     async function removeOutputFolder() {
         try {
-            await fs.rm(path.join(__dirname, "target"), {
+            await fs.rm(targetDir, {
                 recursive: true
             })
-        } catch(err) {
-        }
+        } catch(err) {}
+        await fs.mkdir(targetDir)
     }
 
     async function compile() {
-        const cmd = "npx tsc"
-        const { stdout, stderr } = await util.promisify(childProcess.exec)(cmd)
-        if (stderr) {
-            console.log("Compile failed")
-            throw stderr
-        }
-    }
-
-    async function appendJsOnImports() {
-        const files = await glob("target/**/*.js")
-        for (const file of files) {
-            const data = await fs.readFile(file, 'utf8')
-            const regex = /(import .* from\s+['"])([.]+.+)(?=['"])/g
-            if (!data.match(regex)) continue
-            const newData = data.replace(regex, '$1$2.js')
-            await fs.writeFile(file, newData)
+        try {
+            const cmd = 'npx tsc'
+            const { err, stdout, stderr } = await util.promisify(childProcess.exec)(cmd)
+            if (err || stderr)
+                throw stderr || stdout
+        } catch(err) {
+            console.log('Compile failed')
+            throw err
         }
     }
 })()

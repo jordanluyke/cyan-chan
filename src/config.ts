@@ -1,17 +1,17 @@
-import { singleton } from "tsyringe"
-import * as fs from "fs/promises"
+import { singleton } from 'tsyringe'
+import * as dotenv from 'dotenv'
 
 @singleton()
 export class Config {
-    public botToken = ""
-    public youtubeApiKey = ""
+    public botToken = ''
+    public youtubeApiKey = ''
 
-    public async load(): Promise<void> {
-        let configFile = JSON.parse(await fs.readFile("config/app.json", "utf8"))
+    public load(): void {
+        dotenv.config()
 
-        this.botToken = configFile["botToken"]
-        this.youtubeApiKey = configFile["youtubeApiKey"]
+        this.botToken = process.env.BOT_TOKEN || ''
+        this.youtubeApiKey = process.env.YOUTUBE_API_KEY || ''
 
-        console.log("Config loaded")
+        console.log('Config loaded')
     }
 }

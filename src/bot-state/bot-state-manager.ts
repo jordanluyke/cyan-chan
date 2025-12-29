@@ -1,5 +1,5 @@
-import { singleton } from "tsyringe"
-import { BotState } from "./model/bot-state"
+import { singleton } from 'tsyringe'
+import { BotState } from './model/bot-state.js'
 
 @singleton()
 export class BotStateManager {
@@ -10,8 +10,7 @@ export class BotStateManager {
     }
 
     public createState(guildId: string): BotState {
-        if (this.getState(guildId) != null)
-            throw new Error("Bot state already exists")
+        if (this.getState(guildId) != null) throw new Error('Bot state already exists')
         let botState = new BotState()
         this.botStates.set(guildId, botState)
         return botState
@@ -19,8 +18,7 @@ export class BotStateManager {
 
     public getStateOrThrow(guildId: string): BotState {
         let botState = this.botStates.get(guildId)
-        if (botState == null)
-            throw new Error("BotState null")
+        if (botState == null) throw new Error('BotState null')
         return botState
     }
 }

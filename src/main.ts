@@ -1,11 +1,13 @@
-import "reflect-metadata"
-import { container } from "tsyringe"
-import { ApiManager } from "./api/api-manager"
-import { Config } from "./config"
+import 'reflect-metadata'
+import { container } from 'tsyringe'
+import { ApiManager } from './api/api-manager.js'
+import { Config } from './config.js'
 
-(async () => {
+async function main() {
     const config = container.resolve(Config)
     const apiManager = container.resolve(ApiManager)
-    await config.load()
+    config.load()
     await apiManager.start()
-})()
+}
+
+main()

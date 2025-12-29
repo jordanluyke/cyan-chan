@@ -20,30 +20,30 @@ export class TimeUnit {
     constructor(private scale: number) {}
 
     public toNanos(duration: number): number {
-        return this.scale * duration / nanoseconds
+        return (this.scale * duration) / nanoseconds
     }
 
     public toMicros(duration: number): number {
-        return this.scale * duration / microseconds
+        return (this.scale * duration) / microseconds
     }
 
     public toMillis(duration: number): number {
-        return this.scale * duration / milliseconds
+        return (this.scale * duration) / milliseconds
     }
 
     public toSeconds(duration: number): number {
-        return this.scale * duration / seconds
+        return (this.scale * duration) / seconds
     }
 
     public toMinutes(duration: number): number {
-        return this.scale * duration / minutes
+        return (this.scale * duration) / minutes
     }
 
     public toHours(duration: number): number {
-        return this.scale * duration / hours
+        return (this.scale * duration) / hours
     }
 
     public toDays(duration: number): number {
-        return this.scale * duration / days
+        return (this.scale * duration) / days
     }
 }

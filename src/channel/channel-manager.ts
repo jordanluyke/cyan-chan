@@ -1,28 +1,33 @@
-import { injectable } from "tsyringe"
-import { Config } from "../config"
-import { Message } from "discord.js"
+import { injectable } from 'tsyringe'
+import { Config } from '../config.js'
+import { Message, TextChannel } from 'discord.js'
 
 @injectable()
 export class ChannelManager {
-
-    constructor(
-        private config: Config,
-    ) {}
+    constructor(private config: Config) {}
 
     public async downloadMessages(message: Message): Promise<void> {
         const guildId = message.guildId
         const channelId = message.channelId
         const guild = message.guild
-        const channel = message.guild?.channels.cache.find(channel => channel.id == channelId)
+        if (guild == null) {
+            throw new Error('guild null')
+        }
+        const channel = guild.channels.cache.find(
+            (channel) => channel.id == channelId
+        ) as TextChannel
+
+        await channel.send('Preparing...')
 
         let messages: any[] = []
         while (true) {
             const limit = 100
-            const msgs = await message.channel.messages.fetch({
-                limit,
-                before: messages.length > 0 ? messages[messages.length - 1].id : null
-            })
-                .then(msgs => {
+            const msgs = await message.channel.messages
+                .fetch({
+                    limit,
+                    before: messages.length > 0 ? messages[messages.length - 1].id : null,
+                })
+                .then((msgs) => {
                     return msgs.map((msg: any) => {
                         return {
                             id: msg.id,
@@ -37,9 +42,7 @@ export class ChannelManager {
             if (msgs.length != limit) break
         }
 
-        messages = messages
-            .filter((msg: any) => msg.content != "")
-            .reverse()
+        messages = messages.filter((msg: any) => msg.content != '').reverse()
 
         const data = {
             guildName: guild?.name,
@@ -49,13 +52,14 @@ export class ChannelManager {
             timestamp: new Date().getTime(),
             messages,
         }
-
-        await message.channel.send({
-            files: [{
-                name: "messages.json",
-                contentType: "application/json",
-                attachment: Buffer.from(JSON.stringify(data, null, 2))
-            }]
+        await channel.send({
+            files: [
+                {
+                    name: 'messages.json',
+                    contentType: 'application/json',
+                    attachment: Buffer.from(JSON.stringify(data, null, 2)),
+                },
+            ],
         })
     }
 }

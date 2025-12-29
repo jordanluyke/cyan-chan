@@ -3,17 +3,17 @@
         "allowSyntheticDefaultImports": true,
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
-        "module": "esnext",
-        "moduleResolution": "node16",
-        "noImplicitAny": true,
+        "module": "nodenext",
+        "moduleResolution": "nodenext",
+        "noImplicitAny": false,
         "noImplicitReturns": true,
         "outDir": "target",
+        "resolveJsonModule": true,
         "sourceMap": true,
-        "strictNullChecks": true,
+        "strictNullChecks": false,
         "target": "esnext"
     },
     "include": [
-        "src/**/*",
-        "typings/*.d.ts"
+        "src/**/*"
     ]
 }

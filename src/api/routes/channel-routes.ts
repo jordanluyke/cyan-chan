@@ -1,16 +1,14 @@
-import { Message } from "discord.js"
-import { autoInjectable } from "tsyringe"
-import { MessageRouteHandler } from "../model/message-route-handler"
-import { ChannelManager } from "../../channel/channel-manager"
+import { Message } from 'discord.js'
+import { autoInjectable } from 'tsyringe'
+import { MessageRouteHandler } from '../model/message-route-handler.js'
+import { ChannelManager } from '../../channel/channel-manager.js'
 
 @autoInjectable()
 export class DownloadMessages implements MessageRouteHandler {
-    constructor(
-        public channelManager?: ChannelManager,
-    ) {}
+    constructor(public channelManager?: ChannelManager) {}
 
-    public async handle(message: Message, args: string[]) : Promise<void> {
-        if (this.channelManager == null) throw new Error("Injection failed")
+    public async handle(message: Message, args: string[]): Promise<void> {
+        if (this.channelManager == null) throw new Error('Injection failed')
         return this.channelManager.downloadMessages(message)
     }
 }

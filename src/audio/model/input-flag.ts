@@ -1,7 +1,3 @@
 export class InputFlag {
-    constructor(
-        public name: string,
-        public requiresValue: boolean,
-        public value?: string
-    ) {}
+    constructor(public name: string, public requiresValue: boolean, public value?: string) {}
 }
