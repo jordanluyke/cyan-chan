@@ -6,7 +6,6 @@ import { Config } from './config.js'
 async function main() {
     const config = container.resolve(Config)
     const apiManager = container.resolve(ApiManager)
-    config.load()
     await apiManager.start()
 }
 

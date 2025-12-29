@@ -1,17 +1,10 @@
 import { singleton } from 'tsyringe'
-import * as dotenv from 'dotenv'
+import { config } from 'dotenv'
+
+config({ quiet: true })
 
 @singleton()
 export class Config {
-    public botToken = ''
-    public youtubeApiKey = ''
-
-    public load(): void {
-        dotenv.config()
-
-        this.botToken = process.env.BOT_TOKEN || ''
-        this.youtubeApiKey = process.env.YOUTUBE_API_KEY || ''
-
-        console.log('Config loaded')
-    }
+    public botToken = process.env.BOT_TOKEN
+    public youtubeApiKey = process.env.YOUTUBE_API_KEY
 }
