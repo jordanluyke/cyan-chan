@@ -10,12 +10,12 @@ export class ApiManager {
     constructor(private config: Config) {}
 
     public async start(): Promise<void> {
-        let discordClient = await this.createDiscordClient()
-        await discordClient.login(this.config.botToken)
+        const client = await this.createDiscordClient()
+        await client.login(this.config.botToken)
     }
 
     private async createDiscordClient(): Promise<Client> {
-        return new Client({
+        const client = new Client({
             intents: [
                 GatewayIntentBits.Guilds,
                 GatewayIntentBits.GuildMessages,
@@ -23,8 +23,13 @@ export class ApiManager {
                 GatewayIntentBits.GuildVoiceStates,
             ],
         })
+
+        return client
             .once('clientReady', () => {
                 console.log('Ready')
+                client.user.setActivity({
+                    name: `!cyan | !roll`,
+                })
             })
             .once('reconnecting', () => {
                 console.log('Reconnecting')
