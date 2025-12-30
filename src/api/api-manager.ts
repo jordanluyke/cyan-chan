@@ -1,15 +1,15 @@
-import { injectable } from 'tsyringe'
+import { singleton } from 'tsyringe'
 import { Config } from '../config.js'
 import { Client, GatewayIntentBits, Message, TextChannel } from 'discord.js'
 import { ApiV1 } from './api-v1.js'
 
 const api = new ApiV1()
 
-@injectable()
+@singleton()
 export class ApiManager {
     constructor(private config: Config) {}
 
-    public async start(): Promise<void> {
+    public async init(): Promise<void> {
         const client = await this.createDiscordClient()
         await client.login(this.config.botToken)
     }
