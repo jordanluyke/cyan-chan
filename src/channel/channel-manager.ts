@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe'
-import { Message, TextChannel } from 'discord.js'
+import { Message, TextChannel, Collection } from 'discord.js'
 
 @injectable()
 export class ChannelManager {
@@ -24,29 +24,26 @@ export class ChannelManager {
                     limit,
                     before: messages.length > 0 ? messages[messages.length - 1].id : null,
                 })
-                .then((msgs) => {
-                    return msgs.map((msg: any) => {
-                        return {
-                            id: msg.id,
-                            timestamp: msg.createdTimestamp,
-                            author: {
-                                id: msg.author.id,
-                                username: msg.author.username,
-                                globalName: msg.author.globalName,
-                                avatar: msg.author.avatar,
-                                bot: msg.author.bot,
-                                system: msg.author.system,
-                            },
-                            content: msg.content,
+                .then((msgMap) =>
+                    Array.from(msgMap.values()).map((msg) => {
+                        const json = msg.toJSON()
+                        for (const [key, value] of Object.entries(msg)) {
+                            if (value instanceof Collection) {
+                                json[key] = Object.fromEntries(value.entries())
+                            } else if (value && typeof value.toJSON === 'function') {
+                                json[key] = value.toJSON()
+                            }
                         }
+                        return json
                     })
-                })
+                )
+
             if (msgs.length == 0) break
             messages = messages.concat(msgs)
             if (msgs.length != limit) break
         }
 
-        messages = messages.filter((msg: any) => msg.content != '').reverse()
+        messages = messages.reverse()
 
         const data = {
             guildName: guild?.name,
