@@ -1,11 +1,8 @@
 import { injectable } from 'tsyringe'
-import { Config } from '../config.js'
 import { Message, TextChannel } from 'discord.js'
 
 @injectable()
 export class ChannelManager {
-    constructor(private config: Config) {}
-
     public async downloadMessages(message: Message): Promise<void> {
         const guildId = message.guildId
         const channelId = message.channelId
@@ -32,7 +29,14 @@ export class ChannelManager {
                         return {
                             id: msg.id,
                             timestamp: msg.createdTimestamp,
-                            author: msg.author.global_name ?? msg.author.username,
+                            author: {
+                                id: msg.author.id,
+                                username: msg.author.username,
+                                globalName: msg.author.globalName,
+                                avatar: msg.author.avatar,
+                                bot: msg.author.bot,
+                                system: msg.author.system,
+                            },
                             content: msg.content,
                         }
                     })
