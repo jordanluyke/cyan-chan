@@ -8,6 +8,8 @@ import {
     DiscordGatewayAdapterCreator,
     getVoiceConnection,
     joinVoiceChannel,
+    VoiceConnection,
+    VoiceConnectionStatus,
 } from '@discordjs/voice'
 import youtubedl from 'youtube-dl-exec'
 import { ClientUser, GuildMember, PermissionFlagsBits, TextChannel } from 'discord.js'
@@ -23,6 +25,7 @@ import { YoutubeUtil } from '../util/youtube-util.js'
 import {
     isPlayStillValid,
     shouldDequeueOnIdle,
+    shouldRejoinDisconnectedVoice,
     shouldScheduleVoiceIdleDisconnect,
     shouldSkipQueueItemForVoice,
     shouldStartPlaybackOnEnqueue,
@@ -308,19 +311,7 @@ export class AudioManager {
         }
         if (voiceConnection == null) {
             // Requester is in voice (guarded above); join their channel.
-            voiceConnection = joinVoiceChannel({
-                channelId: voiceChannel!.id,
-                guildId: voiceChannel!.guild.id,
-                adapterCreator: <DiscordGatewayAdapterCreator>(
-                    voiceChannel!.guild.voiceAdapterCreator
-                ),
-            })
-            // Networking/WebSocket failures emit `error` on the connection.
-            // Without a listener, Node treats that as an uncaught exception and
-            // kills the single bot process.
-            voiceConnection.on('error', (error) => {
-                console.error('Voice connection error:', error)
-            })
+            voiceConnection = this.joinAndWatchVoice(voiceChannel!)
         }
 
         const pitchScaleInput = item.inputFlags.filter((flag) => flag.name == '-p')[0]?.value
@@ -347,8 +338,24 @@ export class AudioManager {
                 if (pitchScale == null) return buffer
                 return FfmpegUtil.shift(buffer, pitchScale, attempt)
             })
-            .then((buffer) => {
+            .then(async (buffer) => {
                 if (buffer == null) return
+                if (
+                    !isPlayStillValid(
+                        attempt,
+                        botState.playAttempt,
+                        botState.audioQueueItems[0],
+                        item,
+                    )
+                ) {
+                    return
+                }
+                // Do not reuse the pre-download connection — it may have been
+                // destroyed (untracked) or disconnected while yt-dlp/ffmpeg ran.
+                // subscribe() on Destroyed is a no-op; Disconnected never becomes
+                // playable → AutoPaused forever and the queue stalls.
+                const readyConnection = await this.ensureVoiceForPlayback(guildId, item)
+                if (readyConnection == null) return
                 if (
                     !isPlayStillValid(
                         attempt,
@@ -362,7 +369,7 @@ export class AudioManager {
                 console.log('Playing...')
                 attempt.markPlaying()
                 botState.audioPlayer.play(createAudioResource(Readable.from(buffer)))
-                voiceConnection?.subscribe(botState.audioPlayer)
+                readyConnection.subscribe(botState.audioPlayer)
             })
             .catch(async (error) => {
                 console.error('Download/play failed:', error)
@@ -402,6 +409,86 @@ export class AudioManager {
                     }
                 }
             })
+    }
+
+    private joinAndWatchVoice(
+        voiceChannel: NonNullable<GuildMember['voice']['channel']>,
+    ): VoiceConnection {
+        const voiceConnection = joinVoiceChannel({
+            channelId: voiceChannel.id,
+            guildId: voiceChannel.guild.id,
+            adapterCreator: <DiscordGatewayAdapterCreator>voiceChannel.guild.voiceAdapterCreator,
+        })
+        // Networking/WebSocket failures emit `error` on the connection.
+        // Without a listener, Node treats that as an uncaught exception and
+        // kills the single bot process.
+        voiceConnection.on('error', (error) => {
+            console.error('Voice connection error:', error)
+        })
+        return voiceConnection
+    }
+
+    /**
+     * Re-resolve a usable voice connection after async media prep. Returns null
+     * when the queue head was skipped because nobody remains to hear it.
+     */
+    private async ensureVoiceForPlayback(
+        guildId: string,
+        item: AudioQueueItem,
+    ): Promise<VoiceConnection | null> {
+        const botState = this.botStateManager.getStateOrThrow(guildId)
+        let voiceConnection = getVoiceConnection(guildId)
+        const requesterChannel = item.member.voice.channel
+
+        if (
+            voiceConnection != null &&
+            shouldRejoinDisconnectedVoice(voiceConnection.state.status)
+        ) {
+            if (requesterChannel != null) {
+                voiceConnection = this.joinAndWatchVoice(requesterChannel)
+            } else {
+                voiceConnection.destroy()
+                voiceConnection = getVoiceConnection(guildId)
+            }
+        }
+
+        if (shouldSkipQueueItemForVoice(voiceConnection != null, requesterChannel != null)) {
+            console.error('Skipping queue item after download; voice unavailable')
+            try {
+                await item.sendMessage("can't play — nobody's in voice (˚ ˃̣̣̥⌓˂̣̣̥ )")
+            } catch (sendErr) {
+                console.error('Failed to send voice-channel error message:', sendErr)
+            }
+            if (botState.audioQueueItems[0] !== item) return null
+            voiceConnection = getVoiceConnection(guildId)
+            if (
+                !shouldSkipQueueItemForVoice(
+                    voiceConnection != null,
+                    item.member.voice.channel != null,
+                )
+            ) {
+                return this.ensureVoiceForPlayback(guildId, item)
+            }
+            this.clearPlayAttempt(botState)
+            botState.audioQueueItems = botState.audioQueueItems.slice(1)
+            if (botState.audioQueueItems.length >= 1) {
+                try {
+                    await this.playNextInQueue(guildId)
+                } catch (advanceErr) {
+                    console.error('Failed to advance queue after voice loss:', advanceErr)
+                }
+            }
+            return null
+        }
+
+        if (voiceConnection == null) {
+            voiceConnection = this.joinAndWatchVoice(requesterChannel!)
+        } else if (voiceConnection.state.status === VoiceConnectionStatus.Destroyed) {
+            // Defensive: should already be untracked, but never subscribe destroyed.
+            voiceConnection = this.joinAndWatchVoice(requesterChannel!)
+        }
+
+        return voiceConnection
     }
 
     private getYoutubeVideo(videoId: string, attempt: PlayAttempt): Promise<Buffer> {
