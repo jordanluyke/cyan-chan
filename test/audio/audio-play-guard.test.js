@@ -2,6 +2,7 @@ import {
     isPlayStillValid,
     shouldAdvanceQueueFromPlayerErrorHandler,
     shouldDequeueOnIdle,
+    shouldRejoinDisconnectedVoice,
     shouldScheduleVoiceIdleDisconnect,
     shouldSkipQueueItemForVoice,
     shouldStartPlaybackOnEnqueue,
@@ -263,6 +264,23 @@ describe('audio-play-guard', () => {
         expect(shouldSkipQueueItemForVoice(true, true)).toBe(false)
         expect(shouldSkipQueueItemForVoice(false, true)).toBe(false)
         expect(shouldSkipQueueItemForVoice(false, false)).toBe(true)
+    })
+
+    test('post-download play must rejoin Disconnected voice or skip when untracked', () => {
+        // Destroyed connections are untracked → null status/path uses skip/join.
+        expect(shouldRejoinDisconnectedVoice(null)).toBe(false)
+        expect(shouldRejoinDisconnectedVoice(undefined)).toBe(false)
+        expect(shouldRejoinDisconnectedVoice('ready')).toBe(false)
+        expect(shouldRejoinDisconnectedVoice('connecting')).toBe(false)
+        expect(shouldRejoinDisconnectedVoice('signalling')).toBe(false)
+        expect(shouldRejoinDisconnectedVoice('destroyed')).toBe(false)
+        // Disconnected but still tracked — subscribe would AutoPause forever.
+        expect(shouldRejoinDisconnectedVoice('disconnected')).toBe(true)
+
+        // Kick during download: connection destroyed (untracked) + requester left.
+        expect(shouldSkipQueueItemForVoice(false, false)).toBe(true)
+        // Kick during download: connection destroyed, requester still in VC → rejoin.
+        expect(shouldSkipQueueItemForVoice(false, true)).toBe(false)
     })
 
     test('player error handler must not dequeue; Idle owns queue advance', () => {

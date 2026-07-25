@@ -55,6 +55,19 @@ export function shouldSkipQueueItemForVoice(
 }
 
 /**
+ * After download/pitch, a tracked connection may be Disconnected (kick, move,
+ * voice server change). subscribe() still attaches, but playable requires Ready
+ * — with default NoSubscriberBehavior.Pause the player sits AutoPaused forever
+ * and Idle never advances the queue. joinVoiceChannel() rejoins Disconnected
+ * connections; Destroyed ones are already untracked (getVoiceConnection → null).
+ */
+export function shouldRejoinDisconnectedVoice(
+    connectionStatus: string | null | undefined
+): boolean {
+    return connectionStatus === 'disconnected'
+}
+
+/**
  * @discordjs/voice emits `error` then immediately transitions to Idle in the
  * same turn. Only Idle should dequeue the failed head. If the error handler
  * also dequeues (especially after an await), Idle removes one track and the
