@@ -8,6 +8,7 @@ import {
 } from 'discord.js'
 import { Config } from '../config.js'
 import { BotError } from '../audio/model/error/bot-error.js'
+import { DateUtil } from '../util/date-util.js'
 import { DiscordUtil } from '../util/discord-util.js'
 import { GrokUtil } from '../util/grok-util.js'
 import { CYAN_SYSTEM_PROMPT, GrokPrompt } from './model/grok-prompt.js'
@@ -190,6 +191,7 @@ export class GrokManager {
             return null
         }
 
+        const now = Date.now()
         const parts: string[] = []
         for (const chainMessage of chain) {
             const content = DiscordUtil.getMessageText(chainMessage)
@@ -197,15 +199,16 @@ export class GrokManager {
                 start.guild,
                 chainMessage
             )
+            const age = DateUtil.formatRelativeAge(now - chainMessage.createdTimestamp)
             const msgImages = DiscordUtil.getMessageImages(chainMessage)
             if (content.length > 0) {
                 parts.push(
                     msgImages.length > 0
-                        ? `${displayName} said (with pic):\n${content}`
-                        : `${displayName} said:\n${content}`
+                        ? `${displayName} said (with pic, ${age}):\n${content}`
+                        : `${displayName} said (${age}):\n${content}`
                 )
             } else if (msgImages.length > 0) {
-                parts.push(`${displayName} sent a pic`)
+                parts.push(`${displayName} sent a pic (${age})`)
             }
         }
 
@@ -261,16 +264,18 @@ export class GrokManager {
                 (a, b) => a.createdTimestamp - b.createdTimestamp
             )
 
+            const now = Date.now()
             const parts: string[] = []
             for (const recentMessage of recent) {
                 const content = DiscordUtil.getMessageText(recentMessage)
                 if (content.length === 0) continue
                 const displayName = await DiscordUtil.getMemberDisplayName(guild, recentMessage)
+                const age = DateUtil.formatRelativeAge(now - recentMessage.createdTimestamp)
                 const truncated =
                     content.length > GrokManager.MAX_CONTEXT_MSG_LENGTH
                         ? content.slice(0, GrokManager.MAX_CONTEXT_MSG_LENGTH) + '…'
                         : content
-                parts.push(`${displayName}: ${truncated}`)
+                parts.push(`${displayName} (${age}): ${truncated}`)
             }
             return parts.join('\n')
         } catch {
