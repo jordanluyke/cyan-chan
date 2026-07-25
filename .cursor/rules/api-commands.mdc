@@ -1,0 +1,37 @@
+---
+description: Discord command registry, routing, and thin handler patterns
+globs: src/api/**
+alwaysApply: false
+---
+
+# API / commands
+
+`src/api/` is Discord command registry and gateway routing — not an HTTP API.
+
+## Flow
+
+1. `ApiManager` wires `clientReady`, `interactionCreate`, `messageCreate`
+2. On ready: `application.commands.set(...)` from `ApiV1.commands`
+3. Slash / context menu: name match in `api-v1.ts` → `container.resolve(handler)` → `handle(interaction)`
+4. Mentions / replies to bot: `routeMention` → `GrokManager` (not slash routing)
+
+## Adding a command
+
+1. Implement `SlashCommandHandler` in `src/api/routes/*-routes.ts` (`@injectable()` if deps)
+2. Register in `ApiV1`: `new SlashCommand(builder, HandlerClass)`
+3. Keep handlers thin — domain work belongs in `AudioManager` / `GrokManager` / `ChannelManager`
+
+```typescript
+// ✅ thin handler
+async handle(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply()
+    await this.audioManager.play(/* ... */)
+}
+```
+
+## Conventions
+
+- Narrow interaction type early; else `throw new BotError(...)`
+- Long ops (`/play`, `/draw`, Ask Cyan): `deferReply`; error path must `editReply` when deferred
+- User-facing failures: `new BotError('log reason', 'user-visible text')`
+- Do not `new` handlers in the router — DI-resolve them

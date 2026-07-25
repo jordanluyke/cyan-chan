@@ -1,0 +1,30 @@
+---
+description: Per-guild audio queue, PlayAttempt races, and voice playback invariants
+globs: src/audio/**,src/bot-state/**
+alwaysApply: false
+---
+
+# Audio / bot-state
+
+Per-guild in-memory state only (`BotStateManager` → `Map<guildId, BotState>`). One queue, player, and `playAttempt` per guild. Lost on restart — do not add persistence or cross-guild sharing without an explicit design change.
+
+## Playback flow
+
+```
+/play → enqueue → join VC → PlayAttempt → yt-dlp buffer → optional ffmpeg pitch → audioPlayer.play
+```
+
+Idle with `attempt.isPlaying` dequeues head and advances (or schedules 30‑min leave).
+
+## Invariants — do not break
+
+- **Guild isolation**: all ops keyed by `guildId`; never share players across guilds
+- **PlayAttempt races**: after download/pitch/awaits, re-check validity before `audioPlayer.play()`; always `cancel()` (kill yt-dlp) when clearing/replacing
+- **Idle-only dequeue** for committed audio; player `error` must not dequeue
+- **Skip**: stop player when it owns a resource; Idle + in-flight download uses cancel + slice
+- **Start playback** only when enqueueing into an empty queue
+- **Full-buffer media**: entire track buffered (then optionally pitch-shifted) before play
+
+## Where to edit
+
+Prefer race logic in `audio-play-guard.ts` plus `test/audio/audio-play-guard.test.js` over scattering checks in `AudioManager`. Handlers in `api/routes/audio-routes.ts` stay thin wrappers.

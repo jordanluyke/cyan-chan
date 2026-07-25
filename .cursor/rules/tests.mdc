@@ -1,0 +1,28 @@
+---
+description: Jest test conventions — compile first, import from target/
+globs: test/**
+alwaysApply: false
+---
+
+# Tests
+
+## Layout
+
+- Tests live under `test/` as native ESM `.js` files (`**/test/**/*.test.js`)
+- Import **compiled** code from `target/`, never from `src/`
+
+```javascript
+import { YoutubeUtil } from '../../target/util/youtube-util.js'
+```
+
+## Workflow
+
+- Prefer `npm test` (runs `build` then Jest with `--experimental-vm-modules`)
+- After editing `src/`, rebuild before expecting tests to see changes — otherwise they run stale `target/`
+- Typecheck is the build; there is no lint script
+
+## What to test
+
+- Prefer pure unit tests of guards and utils (e.g. `audio-play-guard`, `youtube-util`, `ffmpeg-util`)
+- Do not add live Discord gateway or xAI network calls in unit tests
+- When changing race/invariant helpers, update the matching guard tests in the same change

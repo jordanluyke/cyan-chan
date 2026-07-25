@@ -1,0 +1,31 @@
+---
+description: Cyan system map and non-negotiable conventions for all edits
+alwaysApply: true
+---
+
+# Architecture
+
+`cyan` is a single long-running Discord bot (Node.js / TypeScript). No HTTP server, database, Docker, or listening ports. Outbound only: Discord gateway, YouTube, xAI, media download. Per-guild audio state is in-memory and lost on restart.
+
+## Layout
+
+```
+main.ts → api/ (Discord routing) → domain (audio/ | grok/ | channel/)
+                                 → bot-state/ | util/ | config.ts
+```
+
+- `api/` — command registry and gateway event routing (not an HTTP API)
+- `audio/` + `bot-state/` — voice queue and playback
+- `grok/` — xAI chat and image orchestration
+- `util/` — static helpers (Discord, YouTube, ffmpeg, xAI HTTP)
+- `config.ts` — env via injected `Config` (`BOT_TOKEN`, `YOUTUBE_API_KEY`, `XAI_API_KEY`)
+
+## Non-negotiables
+
+- **ESM**: local imports use `.js` extensions even from `.ts` sources
+- **DI**: tsyringe `@singleton()` / `@injectable()` + constructor injection; resolve handlers with `container.resolve`
+- **Errors**: throw `BotError` with optional `sendMessage` for Discord replies
+- **Scripts**: `npm run build`, `npm start`, `npm test` — no lint script; typecheck is the build
+- **Format**: Prettier — no semis, `printWidth` 100, `tabWidth` 4, single quotes
+
+Domain details live in path-scoped rules (`api-commands`, `audio-playback`, `grok-ai`, `tests`).
