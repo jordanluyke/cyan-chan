@@ -83,6 +83,9 @@ export class AudioManager {
         botState.audioQueueItems = botState.audioQueueItems.slice(1)
         if (botState.audioQueueItems.length >= 1) {
             await this.playNextInQueue(guildId)
+        } else {
+            // No second Idle event — schedule leave or the bot stays in VC forever.
+            this.scheduleVoiceIdleDisconnectIfEmpty(guildId, botState)
         }
         return true
     }
@@ -117,6 +120,8 @@ export class AudioManager {
                 // dropping the queue without cancel leaves yt-dlp/ffmpeg buffering.
                 this.clearPlayAttempt(botState)
                 botState.audioQueueItems = []
+                // Already Idle — no further Idle event will schedule leave.
+                this.scheduleVoiceIdleDisconnectIfEmpty(guildId, botState)
             }
         }
     }
@@ -266,6 +271,21 @@ export class AudioManager {
         }
     }
 
+    /**
+     * Leave voice after the idle grace period when the queue is empty.
+     * Idle after a finished track is one path; skip/clear/download-fail/voice-skip
+     * can also empty the queue while already Idle — those must schedule here or
+     * the connection is never destroyed.
+     */
+    private scheduleVoiceIdleDisconnectIfEmpty(guildId: string, botState: BotState): void {
+        if (!shouldScheduleVoiceIdleDisconnect(botState.audioQueueItems.length)) return
+        this.clearVoiceIdleTimeout(botState)
+        botState.idleTimeout = setTimeout(() => {
+            const voiceConnection = getVoiceConnection(guildId)
+            voiceConnection?.destroy()
+        }, TimeUnit.MINUTES.toMillis(30))
+    }
+
     private clearPlayAttempt(botState: BotState): void {
         botState.playAttempt?.cancel()
         botState.playAttempt = null
@@ -306,6 +326,8 @@ export class AudioManager {
             botState.audioQueueItems = botState.audioQueueItems.slice(1)
             if (botState.audioQueueItems.length >= 1) {
                 await this.playNextInQueue(guildId)
+            } else {
+                this.scheduleVoiceIdleDisconnectIfEmpty(guildId, botState)
             }
             return
         }
@@ -407,6 +429,8 @@ export class AudioManager {
                     } catch (advanceErr) {
                         console.error('Failed to advance queue after download error:', advanceErr)
                     }
+                } else {
+                    this.scheduleVoiceIdleDisconnectIfEmpty(guildId, botState)
                 }
             })
     }
@@ -477,6 +501,8 @@ export class AudioManager {
                 } catch (advanceErr) {
                     console.error('Failed to advance queue after voice loss:', advanceErr)
                 }
+            } else {
+                this.scheduleVoiceIdleDisconnectIfEmpty(guildId, botState)
             }
             return null
         }
@@ -601,13 +627,7 @@ export class AudioManager {
                 }
 
                 // Nothing left to play — leave voice after idle grace period.
-                if (shouldScheduleVoiceIdleDisconnect(botState.audioQueueItems.length)) {
-                    this.clearVoiceIdleTimeout(botState)
-                    botState.idleTimeout = setTimeout(() => {
-                        const voiceConnection = getVoiceConnection(guildId)
-                        voiceConnection?.destroy()
-                    }, TimeUnit.MINUTES.toMillis(30))
-                }
+                this.scheduleVoiceIdleDisconnectIfEmpty(guildId, botState)
             })
             .on('unsubscribe', () => {
                 console.log('unsubscribe')
