@@ -318,7 +318,7 @@ describe('audio-play-guard', () => {
         expect(shouldStartPlaybackOnEnqueue(3, 2)).toBe(false)
     })
 
-    test('voice leave timer only after Idle leaves the queue empty', () => {
+    test('voice leave timer only when queue is empty (Idle or other empty paths)', () => {
         // Still have tracks — advancing must not schedule destroy()
         expect(shouldScheduleVoiceIdleDisconnect(1)).toBe(false)
         expect(shouldScheduleVoiceIdleDisconnect(3)).toBe(false)
@@ -333,5 +333,22 @@ describe('audio-play-guard', () => {
         // here) and must not reschedule while downloading the new head.
         leaveScheduled = shouldScheduleVoiceIdleDisconnect(1)
         expect(leaveScheduled).toBe(false)
+    })
+
+    test('skip/clear/download-fail emptying queue while Idle must schedule leave', () => {
+        // These paths never fire a second Idle event, so the leave timer must be
+        // scheduled explicitly when the queue hits empty — otherwise the bot
+        // stays connected to voice forever.
+        const scenarios = [
+            { name: 'clear while downloading', queueAfter: [] },
+            { name: 'skip sole downloading track', queueAfter: [] },
+            { name: 'download fail on last track', queueAfter: [] },
+            { name: 'voice skip on last track', queueAfter: [] },
+        ]
+        for (const scenario of scenarios) {
+            expect(shouldScheduleVoiceIdleDisconnect(scenario.queueAfter.length)).toBe(true)
+        }
+        // Advancing to another track must not schedule leave.
+        expect(shouldScheduleVoiceIdleDisconnect(['next'].length)).toBe(false)
     })
 })

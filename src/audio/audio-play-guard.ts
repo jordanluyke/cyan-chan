@@ -91,10 +91,13 @@ export function shouldStartPlaybackOnEnqueue(
 }
 
 /**
- * After Idle dequeues the finished head, only schedule the voice leave timer
- * when nothing remains. Scheduling it while the next download is starting lets
- * a prior empty-queue timer (or one set mid-advance) destroy the connection
- * before the new track reaches Playing — silent no-audio failure.
+ * Schedule the voice leave timer only when the queue is empty. Applies to Idle
+ * after the finished head is removed, and to any other path that empties the
+ * queue without going through Idle (skip/clear while downloading, download
+ * fail, post-download voice skip) — otherwise the bot stays in VC forever.
+ * Do not schedule while the next download is starting: a prior empty-queue
+ * timer (or one set mid-advance) would destroy the connection before the new
+ * track reaches Playing — silent no-audio failure.
  */
 export function shouldScheduleVoiceIdleDisconnect(queueLengthAfterDequeue: number): boolean {
     return queueLengthAfterDequeue === 0
