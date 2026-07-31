@@ -9,7 +9,7 @@ export function isPlayStillValid(
     attempt: PlayAttempt,
     playAttempt: PlayAttempt | null,
     queueHead: unknown,
-    expectedItem: unknown
+    expectedItem: unknown,
 ): boolean {
     return attempt === playAttempt && queueHead === expectedItem
 }
@@ -19,9 +19,7 @@ export function isPlayStillValid(
  * Only dequeue when the live attempt was committed to the player — otherwise
  * we are still downloading (or were cancelled) and Idle is from a prior stop.
  */
-export function shouldDequeueOnIdle(
-    playAttempt: PlayAttempt | null
-): playAttempt is PlayAttempt {
+export function shouldDequeueOnIdle(playAttempt: PlayAttempt | null): playAttempt is PlayAttempt {
     return playAttempt != null && playAttempt.isPlaying
 }
 
@@ -60,7 +58,7 @@ export function shouldKeepHeadOnClear(status: string): boolean {
  */
 export function shouldSkipQueueItemForVoice(
     hasExistingConnection: boolean,
-    requesterInVoice: boolean
+    requesterInVoice: boolean,
 ): boolean {
     return !hasExistingConnection && !requesterInVoice
 }
@@ -73,7 +71,7 @@ export function shouldSkipQueueItemForVoice(
  * connections; Destroyed ones are already untracked (getVoiceConnection → null).
  */
 export function shouldRejoinDisconnectedVoice(
-    connectionStatus: string | null | undefined
+    connectionStatus: string | null | undefined,
 ): boolean {
     return connectionStatus === 'disconnected'
 }
@@ -96,7 +94,7 @@ export function shouldAdvanceQueueFromPlayerErrorHandler(): boolean {
  */
 export function shouldStartPlaybackOnEnqueue(
     previousQueueLength: number,
-    newItemCount: number
+    newItemCount: number,
 ): boolean {
     return newItemCount > 0 && previousQueueLength === 0
 }
@@ -112,4 +110,14 @@ export function shouldStartPlaybackOnEnqueue(
  */
 export function shouldScheduleVoiceIdleDisconnect(queueLengthAfterDequeue: number): boolean {
     return queueLengthAfterDequeue === 0
+}
+
+/**
+ * After a voice connection fails to recover from Disconnected (kick / 4014 with
+ * no rejoin), stop the player if it still owns a resource. Otherwise the player
+ * sits AutoPaused forever (no Ready subscriber), Idle never fires, and the rest
+ * of the queue never plays until a manual /skip or /stop.
+ */
+export function shouldStopPlayerAfterVoiceDisconnectFailure(playerStatus: string): boolean {
+    return shouldStopPlayerForSkip(playerStatus)
 }

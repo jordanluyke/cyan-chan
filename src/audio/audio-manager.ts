@@ -6,6 +6,7 @@ import {
     AudioPlayerStatus,
     createAudioResource,
     DiscordGatewayAdapterCreator,
+    entersState,
     getVoiceConnection,
     joinVoiceChannel,
     VoiceConnection,
@@ -30,11 +31,18 @@ import {
     shouldScheduleVoiceIdleDisconnect,
     shouldSkipQueueItemForVoice,
     shouldStartPlaybackOnEnqueue,
+    shouldStopPlayerAfterVoiceDisconnectFailure,
     shouldStopPlayerForSkip,
 } from './audio-play-guard.js'
 
 /** A440 → A444 (≈ C528) pitch scale */
 const DEFAULT_PITCH_SCALE = 444 / 440
+
+/** Wait for Discord to reclaim a Disconnected connection (channel move / blip). */
+const VOICE_DISCONNECT_RECOVERY_MS = TimeUnit.SECONDS.toMillis(5)
+
+/** Attach disconnect/error watchers once per VoiceConnection instance. */
+const watchedVoiceConnections = new WeakSet<VoiceConnection>()
 
 @injectable()
 export class AudioManager {
@@ -445,18 +453,72 @@ export class AudioManager {
     private joinAndWatchVoice(
         voiceChannel: NonNullable<GuildMember['voice']['channel']>,
     ): VoiceConnection {
+        const guildId = voiceChannel.guild.id
         const voiceConnection = joinVoiceChannel({
             channelId: voiceChannel.id,
-            guildId: voiceChannel.guild.id,
+            guildId,
             adapterCreator: <DiscordGatewayAdapterCreator>voiceChannel.guild.voiceAdapterCreator,
         })
+        if (watchedVoiceConnections.has(voiceConnection)) {
+            return voiceConnection
+        }
+        watchedVoiceConnections.add(voiceConnection)
         // Networking/WebSocket failures emit `error` on the connection.
         // Without a listener, Node treats that as an uncaught exception and
         // kills the single bot process.
         voiceConnection.on('error', (error) => {
             console.error('Voice connection error:', error)
         })
+        // Kick / 4014 leave the connection Disconnected with no auto-rejoin.
+        // The player then AutoPauses (no Ready subscriber) and the queue stalls.
+        voiceConnection.on(VoiceConnectionStatus.Disconnected, () => {
+            void this.handleVoiceDisconnect(guildId, voiceConnection)
+        })
         return voiceConnection
+    }
+
+    /**
+     * Recover from Disconnected, or destroy and unblock the player so Idle can
+     * advance the queue. Network blips transition to Signalling themselves;
+     * channel moves often reach Connecting within the grace period.
+     */
+    private async handleVoiceDisconnect(
+        guildId: string,
+        voiceConnection: VoiceConnection,
+    ): Promise<void> {
+        try {
+            await Promise.race([
+                entersState(
+                    voiceConnection,
+                    VoiceConnectionStatus.Signalling,
+                    VOICE_DISCONNECT_RECOVERY_MS,
+                ),
+                entersState(
+                    voiceConnection,
+                    VoiceConnectionStatus.Connecting,
+                    VOICE_DISCONNECT_RECOVERY_MS,
+                ),
+            ])
+            return
+        } catch {
+            // Grace elapsed without reclaim — treat as permanent disconnect.
+        }
+
+        try {
+            if (voiceConnection.state.status !== VoiceConnectionStatus.Destroyed) {
+                voiceConnection.destroy()
+            }
+        } catch (err) {
+            console.error('Failed to destroy disconnected voice connection:', err)
+        }
+
+        const botState = this.botStateManager.getState(guildId)
+        if (botState == null) return
+        if (shouldStopPlayerAfterVoiceDisconnectFailure(botState.audioPlayer.state.status)) {
+            // Idle dequeues the interrupted head and starts the next item (or
+            // schedules leave). Without stop(), AutoPaused never reaches Idle.
+            botState.audioPlayer.stop(true)
+        }
     }
 
     /**

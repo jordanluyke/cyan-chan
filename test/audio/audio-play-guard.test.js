@@ -7,6 +7,7 @@ import {
     shouldScheduleVoiceIdleDisconnect,
     shouldSkipQueueItemForVoice,
     shouldStartPlaybackOnEnqueue,
+    shouldStopPlayerAfterVoiceDisconnectFailure,
     shouldStopPlayerForSkip,
 } from '../../target/audio/audio-play-guard.js'
 import { PlayAttempt } from '../../target/audio/model/play-attempt.js'
@@ -385,5 +386,35 @@ describe('audio-play-guard', () => {
         }
         // Advancing to another track must not schedule leave.
         expect(shouldScheduleVoiceIdleDisconnect(['next'].length)).toBe(false)
+    })
+
+    test('permanent voice disconnect must stop player so Idle can advance queue', () => {
+        // Kick (4014) → Disconnected with no auto-rejoin. playable subscribers
+        // drop to zero → AutoPaused. Without stop(), Idle never fires and the
+        // rest of the queue never plays.
+        expect(shouldStopPlayerAfterVoiceDisconnectFailure('autopaused')).toBe(true)
+        expect(shouldStopPlayerAfterVoiceDisconnectFailure('playing')).toBe(true)
+        expect(shouldStopPlayerAfterVoiceDisconnectFailure('paused')).toBe(true)
+        expect(shouldStopPlayerAfterVoiceDisconnectFailure('buffering')).toBe(true)
+        // Download in flight / already idle — nothing to unblock.
+        expect(shouldStopPlayerAfterVoiceDisconnectFailure('idle')).toBe(false)
+
+        const queue = ['a', 'b', 'c']
+        const attempt = new PlayAttempt()
+        attempt.markPlaying()
+        let playAttempt = attempt
+        const playerStatus = 'autopaused'
+
+        if (shouldStopPlayerAfterVoiceDisconnectFailure(playerStatus)) {
+            // audioPlayer.stop(true) → Idle
+            if (shouldDequeueOnIdle(playAttempt)) {
+                playAttempt.isPlaying = false
+                queue.shift()
+            }
+        }
+
+        expect(queue).toEqual(['b', 'c'])
+        expect(playAttempt).toBe(attempt)
+        expect(attempt.isPlaying).toBe(false)
     })
 })
