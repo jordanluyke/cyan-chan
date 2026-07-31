@@ -2,6 +2,7 @@ import {
     isPlayStillValid,
     shouldAdvanceQueueFromPlayerErrorHandler,
     shouldDequeueOnIdle,
+    shouldKeepHeadOnClear,
     shouldRejoinDisconnectedVoice,
     shouldScheduleVoiceIdleDisconnect,
     shouldSkipQueueItemForVoice,
@@ -154,12 +155,7 @@ describe('audio-play-guard', () => {
         let playAttempt = downloading
         const status = 'idle'
 
-        if (
-            status === 'playing' ||
-            status === 'paused' ||
-            status === 'buffering' ||
-            status === 'autopaused'
-        ) {
+        if (shouldKeepHeadOnClear(status)) {
             queue = queue.slice(0, 1)
         } else {
             playAttempt.cancel()
@@ -171,6 +167,45 @@ describe('audio-play-guard', () => {
         expect(playAttempt).toBeNull()
         expect(downloadKilled).toBe(true)
         expect(ffmpegKilled).toBe(true)
+    })
+
+    test('clear while Paused must drop head and schedule leave (paused never Idles)', () => {
+        // /pause holds a resource that will not finish without unpause. Old clear
+        // treated Paused like Playing and kept the head — Idle never fired, leave
+        // timer never armed, bot stayed in VC forever after "Queue cleared".
+        expect(shouldKeepHeadOnClear('paused')).toBe(false)
+        expect(shouldKeepHeadOnClear('playing')).toBe(true)
+        expect(shouldKeepHeadOnClear('buffering')).toBe(true)
+        expect(shouldKeepHeadOnClear('autopaused')).toBe(true)
+        expect(shouldKeepHeadOnClear('idle')).toBe(false)
+
+        let queue = ['paused-head', 'upcoming']
+        let stopped = false
+        const status = 'paused'
+
+        if (shouldKeepHeadOnClear(status)) {
+            queue = queue.slice(0, 1)
+        } else {
+            queue = []
+            // Mirror AudioManager: stop the paused player so the resource is released.
+            stopped = true
+        }
+
+        expect(queue).toEqual([])
+        expect(stopped).toBe(true)
+        expect(shouldScheduleVoiceIdleDisconnect(queue.length)).toBe(true)
+    })
+
+    test('clear while Playing keeps head so the current track can finish', () => {
+        let queue = ['now', 'next', 'later']
+        const status = 'playing'
+        if (shouldKeepHeadOnClear(status)) {
+            queue = queue.slice(0, 1)
+        } else {
+            queue = []
+        }
+        expect(queue).toEqual(['now'])
+        expect(shouldScheduleVoiceIdleDisconnect(queue.length)).toBe(false)
     })
 
     test('rejects play when queue head was replaced', () => {

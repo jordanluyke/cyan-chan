@@ -25,6 +25,7 @@ import { YoutubeUtil } from '../util/youtube-util.js'
 import {
     isPlayStillValid,
     shouldDequeueOnIdle,
+    shouldKeepHeadOnClear,
     shouldRejoinDisconnectedVoice,
     shouldScheduleVoiceIdleDisconnect,
     shouldSkipQueueItemForVoice,
@@ -111,16 +112,22 @@ export class AudioManager {
     public async clearQueue(guildId: string): Promise<void> {
         const botState = this.getBotStateOrCreate(guildId)
         if (botState.audioQueueItems.length > 0) {
-            // Keep the committed head whenever the player owns a resource —
-            // including Buffering/AutoPaused, which still resume/finish audio.
-            if (shouldStopPlayerForSkip(botState.audioPlayer.state.status)) {
+            const status = botState.audioPlayer.state.status
+            // Keep the head only when it will still reach Idle (Playing/Buffering/
+            // AutoPaused). User-Paused never finishes without unpause — keeping it
+            // after clear leaves the bot in VC forever with a zombie track.
+            if (shouldKeepHeadOnClear(status)) {
                 botState.audioQueueItems = botState.audioQueueItems.slice(0, 1)
             } else {
-                // Idle with a head means download/shift may still be in flight —
-                // dropping the queue without cancel leaves yt-dlp/ffmpeg buffering.
+                // Idle: cancel in-flight download/shift. Paused: stop so Idle does
+                // not keep a resource after we empty the queue.
                 this.clearPlayAttempt(botState)
                 botState.audioQueueItems = []
-                // Already Idle — no further Idle event will schedule leave.
+                if (status === AudioPlayerStatus.Paused) {
+                    botState.audioPlayer.stop(true)
+                }
+                // Already Idle, or Paused→stopped without a playing attempt —
+                // no Idle dequeue path will schedule leave.
                 this.scheduleVoiceIdleDisconnectIfEmpty(guildId, botState)
             }
         }

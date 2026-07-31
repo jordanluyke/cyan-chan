@@ -43,6 +43,17 @@ export function shouldStopPlayerForSkip(status: string): boolean {
 }
 
 /**
+ * `/clear` may keep the committed head only when that resource will still reach
+ * Idle on its own: Playing/Buffering finish normally; AutoPaused resumes when a
+ * subscriber is playable. User-Paused audio never emits Idle without unpause
+ * (there is no `/resume`) or an explicit stop — keeping that head after clear
+ * leaves a zombie track and never arms the voice leave timer.
+ */
+export function shouldKeepHeadOnClear(status: string): boolean {
+    return status === 'playing' || status === 'buffering' || status === 'autopaused'
+}
+
+/**
  * Queue advance should keep using an existing guild voice connection even if
  * the original requester left VC. Only skip the head when we would need to
  * join and have no channel to join.
