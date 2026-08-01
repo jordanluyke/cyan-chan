@@ -26,6 +26,7 @@ import { YoutubeUtil } from '../util/youtube-util.js'
 import {
     isPlayStillValid,
     shouldDequeueOnIdle,
+    shouldForceStopOnSkip,
     shouldKeepHeadOnClear,
     shouldRejoinDisconnectedVoice,
     shouldScheduleVoiceIdleDisconnect,
