@@ -2,6 +2,7 @@ import {
     isPlayStillValid,
     shouldAdvanceQueueFromPlayerErrorHandler,
     shouldDequeueOnIdle,
+    shouldForceStopOnSkip,
     shouldKeepHeadOnClear,
     shouldRejoinDisconnectedVoice,
     shouldScheduleVoiceIdleDisconnect,
@@ -270,6 +271,36 @@ describe('audio-play-guard', () => {
         expect(shouldStopPlayerForSkip('idle')).toBe(false)
     })
 
+    test('skip while Paused/AutoPaused must force-stop or Idle never fires', () => {
+        // @discordjs/voice stop(false) arms silencePaddingFrames (default 5) but
+        // leaves status as-is. Paused/AutoPaused return early in _stepPrepare and
+        // never consume padding → Idle never dequeues → queue + voice stuck.
+        // There is no /resume, so /skip is the natural recovery — it must work.
+        expect(shouldForceStopOnSkip()).toBe(true)
+
+        for (const status of ['paused', 'autopaused']) {
+            const queue = ['a', 'b', 'c']
+            const attempt = new PlayAttempt()
+            attempt.markPlaying()
+            let playAttempt = attempt
+            let forced = false
+
+            if (shouldStopPlayerForSkip(status)) {
+                forced = shouldForceStopOnSkip()
+                // Only force-stop reaches Idle from Paused/AutoPaused.
+                if (forced && shouldDequeueOnIdle(playAttempt)) {
+                    playAttempt.isPlaying = false
+                    queue.shift()
+                }
+            }
+
+            expect(forced).toBe(true)
+            expect(queue).toEqual(['b', 'c'])
+            expect(playAttempt).toBe(attempt)
+            expect(attempt.isPlaying).toBe(false)
+        }
+    })
+
     test('skip while AutoPaused stops player so Idle dequeues (does not leave old resource)', () => {
         const queue = ['a', 'b', 'c']
         const attempt = new PlayAttempt()
@@ -279,7 +310,7 @@ describe('audio-play-guard', () => {
 
         // Correct skip path when a resource is committed:
         if (shouldStopPlayerForSkip(status)) {
-            // audioPlayer.stop() → Idle; do not clear playAttempt first.
+            // audioPlayer.stop(true) → Idle; do not clear playAttempt first.
             if (shouldDequeueOnIdle(playAttempt)) {
                 playAttempt.isPlaying = false
                 queue.shift()

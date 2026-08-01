@@ -30,6 +30,11 @@ export function shouldDequeueOnIdle(playAttempt: PlayAttempt | null): playAttemp
  * (default noSubscriber behavior) still holds that resource and will resume it
  * when a voice connection becomes playable; skipping without stop() leaves the
  * old track playing while the queue advances.
+ *
+ * Callers must use `audioPlayer.stop(true)`. Default silence padding is 5 frames;
+ * `stop(false)` only arms that padding and leaves status unchanged. Paused and
+ * AutoPaused never read those frames in `_stepPrepare`, so Idle never fires —
+ * the queue head sticks and voice leave never schedules.
  */
 export function shouldStopPlayerForSkip(status: string): boolean {
     return (
@@ -38,6 +43,14 @@ export function shouldStopPlayerForSkip(status: string): boolean {
         status === 'buffering' ||
         status === 'autopaused'
     )
+}
+
+/**
+ * Whether skip/replace must pass `force=true` to `audioPlayer.stop`. Always true:
+ * without force, Paused/AutoPaused never reach Idle (see shouldStopPlayerForSkip).
+ */
+export function shouldForceStopOnSkip(): boolean {
+    return true
 }
 
 /**
