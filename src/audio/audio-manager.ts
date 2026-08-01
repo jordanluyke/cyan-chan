@@ -83,7 +83,9 @@ export class AudioManager {
         if (shouldStopPlayerForSkip(status)) {
             // Idle handler dequeues the finished head and starts the next item.
             // Includes Buffering: player already owns a resource (not download-in-flight).
-            botState.audioPlayer.stop()
+            // Must force: stop(false) only arms silence padding, and Paused/AutoPaused
+            // never consume those frames — Idle would never fire and the queue stalls.
+            botState.audioPlayer.stop(shouldForceStopOnSkip())
             return true
         }
 
