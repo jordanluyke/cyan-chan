@@ -41,8 +41,8 @@ export interface GrokChatResult {
     images: Buffer[]
 }
 
-export const IMAGE_MODEL = 'grok-imagine-image-quality'
-export const CHAT_MODEL = 'grok-4.5'
+export const IMAGE_MODEL = 'grok-imagine-image-2.0'
+export const CHAT_MODEL = 'grok-4.6'
 
 const DRAW_IMAGE_TOOL: ResponsesTool = {
     type: 'function',
